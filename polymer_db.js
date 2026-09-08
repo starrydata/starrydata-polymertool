@@ -187,6 +187,18 @@ const POLYMER_DB = [
       }
     ]
   },
+  {
+    key: 'PES', label: 'PES|Polyethersulfone',
+    displayName: 'poly(oxy-1,4-phenylene-sulfonyl-1,4-phenylene) [PESU]', defaultClass: 'Homopolymer',
+    aliases: ['PESU', 'Ultrason E', 'Victrex ES', 'Sumikaexcel PES', 'Veradel', 'Gafone', 'polyethersulfone', 'polyether sulfone'],
+    elements: [{ name: 'oxy-phenylene-sulfonyl-phenylene unit', smiles: '[$]Oc1ccc(S(=O)(=O)c2ccc([$])cc2)cc1', polyGroup: '', note: 'フェニレンエーテル＋スルホン繰り返し単位。Ultrason E・Victrex ES 型。ビスフェノールAなし' }]
+  },
+  {
+    key: 'PSU', label: 'PSU|Polysulfone (bisphenol A type)',
+    displayName: 'poly(oxy-4,4\'-isopropylidene-diphenyleneoxy-diphenylene sulfone) [Udel type]', defaultClass: 'Homopolymer',
+    aliases: ['PSF', 'Udel', 'Polysulfone P-1700', 'Mindel', 'polysulfone', 'bisphenol A polysulfone'],
+    elements: [{ name: 'bisphenol A diphenyl sulfone repeat unit', smiles: '[$]Oc1ccc(C(C)(C)c2ccc(Oc3ccc(S(=O)(=O)c4ccc([$])cc4)cc3)cc2)cc1', polyGroup: '', note: 'ビスフェノールA型ポリスルホン（Udel P-1700型）。PESU（Ultrason E型）とは構造が異なる' }]
+  },
   { key: 'Other',       label: 'Other',       displayName: '', defaultClass: 'Homopolymer', aliases: [], elements: [{ name: '', smiles: '', polyGroup: '', note: '' }] },
   { key: 'Crosslinker', label: 'Crosslinker', displayName: '', defaultClass: 'Homopolymer', aliases: [], elements: [{ name: '', smiles: '', polyGroup: '', note: '' }] }
 ];

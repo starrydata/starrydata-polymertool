@@ -1098,50 +1098,87 @@ function toggleGuide(btn) {
 // =============================================
 // ポリマー名検索
 // =============================================
-function polymerSearch(q) {
-  const results = document.getElementById('psearch-results');
-  q = (q || '').trim().toLowerCase();
-  if (!q) { results.innerHTML = ''; return; }
-
-  const hits = POLYMER_DB.filter(p =>
+function searchOneToken(token) {
+  const q = token.toLowerCase();
+  const match = p =>
     p.key !== 'Other' && p.key !== 'Crosslinker' && (
       p.key.toLowerCase().includes(q) ||
       p.label.toLowerCase().includes(q) ||
       (p.displayName || '').toLowerCase().includes(q) ||
       (p.aliases || []).some(a => a.toLowerCase().includes(q))
-    )
-  );
-
+    );
+  let hits = POLYMER_DB.filter(match);
   if (!hits.length) {
+    const base = q.replace(/-[a-z0-9]+$/i, '').trim();
+    if (base && base !== q) hits = POLYMER_DB.filter(p => {
+      const bq = base;
+      return p.key !== 'Other' && p.key !== 'Crosslinker' && (
+        p.key.toLowerCase().includes(bq) ||
+        p.label.toLowerCase().includes(bq) ||
+        (p.displayName || '').toLowerCase().includes(bq) ||
+        (p.aliases || []).some(a => a.toLowerCase().includes(bq))
+      );
+    });
+  }
+  return hits;
+}
+
+function parsePolymerQuery(raw) {
+  let s = raw
+    .replace(/\d+\.?\d*\s*(wt|mol|vol|mass)%/gi, ' ')
+    .replace(/\d+\.?\d*\s*%/g, ' ')
+    .replace(/\d+\.?\d*\s*(phr|pphr|pbw)/gi, ' ');
+  return s.split(/[+\/,;|]+/).map(t => t.trim()).filter(t => t.length > 1);
+}
+
+function renderResultCard(p, tok) {
+  const matchedAlias = (p.aliases || []).filter(a => a.toLowerCase().includes(tok.toLowerCase()));
+  const aliasHtml = matchedAlias.length
+    ? `<div style="padding:3px 12px 5px;font-size:11px;color:var(--gray-400);">
+         製品名・別名ヒット: <span style="color:#92400e;font-weight:600;">${matchedAlias.map(a => esc(a)).join('、')}</span>
+       </div>`
+    : '';
+  return `
+  <div class="psearch-card">
+    <div class="psearch-card-header">
+      <span class="psearch-key">${esc(p.key)}</span>
+      <span class="psearch-fullname">${esc(p.displayName || p.label)}</span>
+      <button class="psearch-add-btn" onclick="addComponentFromSearch('${esc(p.key)}')">+ component に追加</button>
+    </div>
+    ${aliasHtml}
+    ${p.elements.map((el, i) => `
+      <div class="psearch-elem-row">
+        <span class="psearch-elem-badge">element #${i+1}</span>
+        <span class="psearch-elem-name">${esc(el.name)}</span>
+        <span class="psearch-smiles">${esc(el.smiles || '（SMILES未設定）')}</span>
+      </div>
+    `).join('')}
+  </div>`;
+}
+
+function polymerSearch(q) {
+  const results = document.getElementById('psearch-results');
+  q = (q || '').trim();
+  if (!q) { results.innerHTML = ''; return; }
+
+  const tokens = parsePolymerQuery(q);
+  if (!tokens.length) { results.innerHTML = ''; return; }
+
+  const seen = new Set();
+  const allHits = [];
+  tokens.forEach(tok => {
+    searchOneToken(tok).forEach(p => {
+      if (!seen.has(p.key)) { seen.add(p.key); allHits.push({ p, tok }); }
+    });
+  });
+
+  if (!allHits.length) {
     results.innerHTML = `<div class="psearch-empty">「${esc(q)}」は内部DBに見つかりませんでした。<br>
       下の element カード内の <b>🔍 PubChem</b> 欄でモノマー名を検索するか、「Other」で手動入力してください。</div>`;
     return;
   }
 
-  results.innerHTML = hits.map(p => {
-    const matchedAlias = (p.aliases || []).filter(a => a.toLowerCase().includes(q));
-    const aliasHtml = matchedAlias.length
-      ? `<div style="padding:3px 12px 5px;font-size:11px;color:var(--gray-400);">
-           製品名・別名ヒット: <span style="color:#92400e;font-weight:600;">${matchedAlias.map(a => esc(a)).join('、')}</span>
-         </div>`
-      : '';
-    return `
-    <div class="psearch-card">
-      <div class="psearch-card-header">
-        <span class="psearch-key">${esc(p.key)}</span>
-        <span class="psearch-fullname">${esc(p.displayName || p.label)}</span>
-        <button class="psearch-add-btn" onclick="addComponentFromSearch('${esc(p.key)}')">+ component に追加</button>
-      </div>
-      ${aliasHtml}
-      ${p.elements.map((el, i) => `
-        <div class="psearch-elem-row">
-          <span class="psearch-elem-badge">element #${i+1}</span>
-          <span class="psearch-elem-name">${esc(el.name)}</span>
-          <span class="psearch-smiles">${esc(el.smiles || '（SMILES未設定）')}</span>
-        </div>
-      `).join('')}
-    </div>`;
-  }).join('');
+  results.innerHTML = allHits.map(({ p, tok }) => renderResultCard(p, tok)).join('');
 }
 
 function clearPolymerSearch() {
