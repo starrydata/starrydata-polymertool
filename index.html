@@ -1484,47 +1484,64 @@ async function runStructureRecognition(base64) {
   // HuggingFace Inference API（api-inference.huggingface.co — hf.space とは別ドメイン）
   async function tryHFInference() {
     const token = localStorage.getItem(_HF_TOKEN_KEY);
-    if (!token) throw new Error('no token');
+    if (!token) throw new Error('トークン未設定');
     const byteStr = atob(base64.split(',')[1]);
     const arr = new Uint8Array(byteStr.length);
     for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
     const blob = new Blob([arr], { type: mime });
-    const r = await fetch('https://api-inference.huggingface.co/models/Kohulan/DECIMER-Image_Transformer', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
-      body: blob
-    });
-    if (!r.ok) throw new Error(`HF ${r.status}`);
-    const data = await r.json();
-    const s = data?.[0]?.generated_text || data?.generated_text;
-    if (!s || !s.trim()) throw new Error('no SMILES');
-    return s.trim();
+
+    for (let retry = 0; retry < 3; retry++) {
+      const r = await fetch('https://api-inference.huggingface.co/models/Kohulan/DECIMER-Image_Transformer', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: blob
+      });
+      if (r.status === 503) {
+        const j = await r.json().catch(() => ({}));
+        const wait = Math.min((j.estimated_time || 20) * 1000, 30000);
+        if (se()) { se().textContent = `モデル起動中… ${Math.round(wait/1000)}秒待機 (${retry+1}/3)`; se().style.color = '#d97706'; }
+        await new Promise(res => setTimeout(res, wait));
+        continue;
+      }
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        throw new Error(`HF API ${r.status}${j.error ? ': ' + j.error : ''}`);
+      }
+      const data = await r.json();
+      const s = data?.[0]?.generated_text || data?.generated_text;
+      if (!s || !s.trim()) throw new Error('レスポンスに SMILES なし: ' + JSON.stringify(data).slice(0, 80));
+      return s.trim();
+    }
+    throw new Error('モデル起動タイムアウト (3回リトライ失敗)');
   }
 
-  const attempts = [
-    tryHFInference,
-    () => tryG5('decimer-decimer.hf.space', 'predict'),
-    () => tryG5('decimer-decimer.hf.space', 'process'),
-    () => tryG5('kohulan-decimer.hf.space', 'predict'),
-    () => tryG3('decimer-decimer.hf.space'),
-    () => tryG3('kohulan-decimer.hf.space'),
+  const labeled = [
+    { label: 'HF Inference API', fn: tryHFInference },
+    { label: 'Gradio5 decimer-decimer/predict', fn: () => tryG5('decimer-decimer.hf.space', 'predict') },
+    { label: 'Gradio5 decimer-decimer/process', fn: () => tryG5('decimer-decimer.hf.space', 'process') },
+    { label: 'Gradio5 kohulan-decimer/predict',  fn: () => tryG5('kohulan-decimer.hf.space', 'predict') },
+    { label: 'Gradio3 decimer-decimer',           fn: () => tryG3('decimer-decimer.hf.space') },
+    { label: 'Gradio3 kohulan-decimer',           fn: () => tryG3('kohulan-decimer.hf.space') },
   ];
 
-  for (const attempt of attempts) {
+  const errs = [];
+  for (const { label, fn } of labeled) {
+    if (se()) { se().textContent = `試行中: ${label}…`; se().style.color = 'var(--gray-400)'; }
     try {
-      const smiles = await attempt();
-      if (se()) { se().textContent = `✓ 認識完了 → ${smiles.length > 50 ? smiles.slice(0, 50) + '…' : smiles}`; se().style.color = '#166534'; }
+      const smiles = await fn();
+      if (se()) { se().textContent = `✓ 認識完了 [${label}] → ${smiles.length > 40 ? smiles.slice(0,40)+'…' : smiles}`; se().style.color = '#166534'; }
       await searchBySMILES(smiles);
       return;
-    } catch(_) {}
+    } catch(e) { errs.push(`${label}: ${e.message}`); }
   }
 
-  if (se()) { se().textContent = '✗ DECIMER 接続失敗'; se().style.color = 'var(--red)'; }
+  if (se()) { se().textContent = '✗ 全試行失敗'; se().style.color = 'var(--red)'; }
+  const errDetail = errs.map(e => `<li style="font-size:10px;color:var(--gray-400);">${esc(e)}</li>`).join('');
   document.getElementById('psearch-results').innerHTML = `
     <div class="psearch-empty" style="text-align:left;padding:10px 4px;">
-      DECIMER への接続に失敗しました（ネットワーク制限の可能性）。<br>
+      全ての接続方法が失敗しました。エラー詳細：<ul style="margin:4px 0 8px 16px;">${errDetail}</ul>
       <a href="https://decimer.ai/" target="_blank" rel="noopener"
-        style="color:var(--blue-mid)">decimer.ai</a> で画像をアップロードして SMILES を取得後、下に貼り付けてください。
+        style="color:var(--blue-mid)">decimer.ai</a> で SMILES を取得後、下に貼り付けてください。
       <div style="display:flex;gap:6px;margin-top:8px;">
         <input type="text" id="smiles-paste-input"
           placeholder="取得した SMILES を貼り付け…"
