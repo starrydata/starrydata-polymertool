@@ -618,20 +618,26 @@ pre.json-pre {
 #psearch-img-preview img { max-height: 72px; max-width: 140px; border-radius: 4px; border: 1px solid #fde68a; object-fit: contain; }
 #decimer-status { font-size: 12px; color: var(--gray-400); flex: 1; }
 #hf-settings-bar {
-  display: none; align-items: center; gap: 8px;
-  padding: 7px 14px; background: #f0f9ff; border-bottom: 1px solid #bae6fd;
+  display: none; flex-direction: column; gap: 6px;
+  padding: 10px 14px; background: #f0f9ff; border-bottom: 1px solid #bae6fd;
   font-size: 12px;
 }
-#hf-settings-bar input {
+.api-key-row { display: flex; align-items: center; gap: 8px; }
+.api-key-label { font-weight: 700; white-space: nowrap; min-width: 100px; }
+.api-key-label.gemini { color: #1a73e8; }
+.api-key-label.hf     { color: #0369a1; }
+.api-key-row input {
   flex: 1; height: 28px; padding: 0 8px; border: 1px solid #bae6fd;
   border-radius: 4px; font-family: var(--mono); font-size: 12px; background: #fff; min-width: 0;
 }
-#hf-settings-bar input:focus { outline: none; border-color: #0284c7; }
+.api-key-row input:focus { outline: none; border-color: #0284c7; }
 .hf-save-btn {
   height: 28px; padding: 0 10px; background: #0284c7; color: #fff;
   border: none; border-radius: 4px; font-size: 11px; font-family: var(--font); cursor: pointer; white-space: nowrap;
 }
 .hf-save-btn:hover { background: #0369a1; }
+.hf-save-btn.gemini-btn { background: #1a73e8; }
+.hf-save-btn.gemini-btn:hover { background: #1557b0; }
 .hf-clear-btn {
   height: 28px; padding: 0 8px; background: #fff; color: var(--gray-600);
   border: 1px solid var(--gray-200); border-radius: 4px; font-size: 11px; font-family: var(--font); cursor: pointer;
@@ -812,11 +818,20 @@ pre.json-pre {
       <input type="file" id="imgSearchInput" accept="image/*" style="display:none" onchange="handleImageFile(this.files[0])">
     </div>
     <div id="hf-settings-bar">
-      <span style="color:#0369a1;font-weight:700;white-space:nowrap;">HF Token</span>
-      <input type="password" id="hf-token-input" placeholder="hf_xxxxxxxxxxxx" autocomplete="off">
-      <button class="hf-save-btn" onclick="saveHFToken()">保存</button>
-      <button class="hf-clear-btn" onclick="clearHFToken()">削除</button>
-      <span id="hf-token-status"></span>
+      <div class="api-key-row">
+        <span class="api-key-label gemini">Gemini API Key</span>
+        <input type="password" id="gemini-key-input" placeholder="AIzaSy…（aistudio.google.com で取得）" autocomplete="off">
+        <button class="hf-save-btn gemini-btn" onclick="saveGeminiKey()">保存</button>
+        <button class="hf-clear-btn" onclick="clearGeminiKey()">削除</button>
+        <span id="gemini-key-status"></span>
+      </div>
+      <div class="api-key-row">
+        <span class="api-key-label hf">HF Token</span>
+        <input type="password" id="hf-token-input" placeholder="hf_xxxxxxxxxxxx" autocomplete="off">
+        <button class="hf-save-btn" onclick="saveHFToken()">保存</button>
+        <button class="hf-clear-btn" onclick="clearHFToken()">削除</button>
+        <span id="hf-token-status"></span>
+      </div>
     </div>
     <div id="psearch-img-preview"></div>
     <div id="psearch-results"></div>
@@ -1375,21 +1390,34 @@ function clearPolymerSearch() {
 }
 
 // =============================================
-// HuggingFace トークン管理
+// API キー管理（Gemini + HuggingFace）
 // =============================================
-const _HF_TOKEN_KEY = 'hf_inference_token';
+const _HF_TOKEN_KEY    = 'hf_inference_token';
+const _GEMINI_KEY_KEY  = 'gemini_api_key';
 
 function toggleHFSettings() {
   const bar = document.getElementById('hf-settings-bar');
   const open = bar.style.display !== 'flex';
   bar.style.display = open ? 'flex' : 'none';
   if (open) {
-    const stored = localStorage.getItem(_HF_TOKEN_KEY) || '';
-    document.getElementById('hf-token-input').value = stored ? '（保存済）' : '';
+    document.getElementById('hf-token-input').value    = localStorage.getItem(_HF_TOKEN_KEY)   ? '（保存済）' : '';
+    document.getElementById('gemini-key-input').value  = localStorage.getItem(_GEMINI_KEY_KEY) ? '（保存済）' : '';
     updateHFStatus();
   }
 }
 
+function saveGeminiKey() {
+  const val = document.getElementById('gemini-key-input').value.trim();
+  if (!val || val === '（保存済）') return;
+  localStorage.setItem(_GEMINI_KEY_KEY, val);
+  document.getElementById('gemini-key-input').value = '（保存済）';
+  updateHFStatus();
+}
+function clearGeminiKey() {
+  localStorage.removeItem(_GEMINI_KEY_KEY);
+  document.getElementById('gemini-key-input').value = '';
+  updateHFStatus();
+}
 function saveHFToken() {
   const val = document.getElementById('hf-token-input').value.trim();
   if (!val || val === '（保存済）') return;
@@ -1397,19 +1425,16 @@ function saveHFToken() {
   document.getElementById('hf-token-input').value = '（保存済）';
   updateHFStatus();
 }
-
 function clearHFToken() {
   localStorage.removeItem(_HF_TOKEN_KEY);
   document.getElementById('hf-token-input').value = '';
   updateHFStatus();
 }
-
 function updateHFStatus() {
-  const el = document.getElementById('hf-token-status');
-  if (!el) return;
-  const stored = localStorage.getItem(_HF_TOKEN_KEY);
-  el.className = stored ? 'hf-status-ok' : 'hf-status-none';
-  el.textContent  = stored ? '✓ 設定済' : '未設定';
+  const g = document.getElementById('gemini-key-status');
+  const h = document.getElementById('hf-token-status');
+  if (g) { const v = localStorage.getItem(_GEMINI_KEY_KEY); g.className = v ? 'hf-status-ok' : 'hf-status-none'; g.textContent = v ? '✓ 設定済' : '未設定'; }
+  if (h) { const v = localStorage.getItem(_HF_TOKEN_KEY);   h.className = v ? 'hf-status-ok' : 'hf-status-none'; h.textContent = v ? '✓ 設定済' : '未設定'; }
 }
 
 // =============================================
@@ -1481,6 +1506,31 @@ async function runStructureRecognition(base64) {
     return s.trim();
   }
 
+  // Gemini Vision API（generativelanguage.googleapis.com）
+  async function tryGemini() {
+    const key = localStorage.getItem(_GEMINI_KEY_KEY);
+    if (!key) throw new Error('Gemini キー未設定');
+    const b64 = base64.split(',')[1];
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [
+          { inline_data: { mime_type: mime, data: b64 } },
+          { text: 'この化学構造式を SMILES 記法で表してください。SMILES のみを1行で出力してください。説明不要。' }
+        ]}]})
+      }
+    );
+    if (!res.ok) { const j = await res.json().catch(()=>({})); throw new Error(`Gemini ${res.status}: ${j?.error?.message || ''}`); }
+    const data = await res.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    if (!text) throw new Error('Gemini レスポンスに SMILES なし');
+    const smiles = text.split('\n')[0].replace(/^`+|`+$/g, '').trim();
+    if (!smiles) throw new Error('SMILES 抽出失敗');
+    return smiles;
+  }
+
   // HuggingFace Inference API（api-inference.huggingface.co — hf.space とは別ドメイン）
   async function tryHFInference() {
     const token = localStorage.getItem(_HF_TOKEN_KEY);
@@ -1516,7 +1566,8 @@ async function runStructureRecognition(base64) {
   }
 
   const labeled = [
-    { label: 'HF Inference API', fn: tryHFInference },
+    { label: 'Gemini Vision API', fn: tryGemini },
+    { label: 'HF Inference API',  fn: tryHFInference },
     { label: 'Gradio5 decimer-decimer/predict', fn: () => tryG5('decimer-decimer.hf.space', 'predict') },
     { label: 'Gradio5 decimer-decimer/process', fn: () => tryG5('decimer-decimer.hf.space', 'process') },
     { label: 'Gradio5 kohulan-decimer/predict',  fn: () => tryG5('kohulan-decimer.hf.space', 'predict') },
@@ -1524,12 +1575,12 @@ async function runStructureRecognition(base64) {
     { label: 'Gradio3 kohulan-decimer',           fn: () => tryG3('kohulan-decimer.hf.space') },
   ];
 
-  const token = localStorage.getItem(_HF_TOKEN_KEY);
+  const geminiKey = localStorage.getItem(_GEMINI_KEY_KEY);
   if (se()) {
-    se().textContent = token ? '① HF Inference API に送信中…' : '① HF トークン未設定 → スキップ';
+    se().textContent = geminiKey ? '① Gemini Vision API に送信中…' : '① Gemini キー未設定 → スキップ';
     se().style.color = 'var(--gray-400)';
   }
-  await new Promise(r => setTimeout(r, 300));
+  await new Promise(r => setTimeout(r, 200));
 
   const errs = [];
   for (let i = 0; i < labeled.length; i++) {
@@ -1743,7 +1794,7 @@ function clearAll() {
 // 初期表示
 loadCustomDB();
 addComponent();
-updateHFStatus();
+setTimeout(updateHFStatus, 0);
 </script>
 </body>
 </html>
