@@ -1128,7 +1128,9 @@ function parsePolymerQuery(raw) {
     .replace(/\d+\.?\d*\s*(wt|mol|vol|mass)%/gi, ' ')
     .replace(/\d+\.?\d*\s*%/g, ' ')
     .replace(/\d+\.?\d*\s*(phr|pphr|pbw)/gi, ' ');
-  return s.split(/[+\/,;|]+/).map(t => t.trim()).filter(t => t.length > 1);
+  return s.split(/[+\/,;|:()\[\]=\s]+/)
+    .map(t => t.trim())
+    .filter(t => t.length > 1 && !/^\d+\.?\d*$/.test(t));
 }
 
 function renderResultCard(p, tok) {
