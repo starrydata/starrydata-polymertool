@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ポリマー組成 BigSMILES 入力ツール</title>
+<style>
+/* ─── Reset ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ─── Base ─── */
+:root {
+  --blue-dark:   #1e3a5f;
+  --blue-mid:    #2563eb;
+  --blue-light:  #dbeafe;
+  --teal:        #0d9488;
+  --teal-light:  #ccfbf1;
+  --red:         #dc2626;
+  --red-light:   #fee2e2;
+  --gray-50:     #f9fafb;
+  --gray-100:    #f3f4f6;
+  --gray-200:    #e5e7eb;
+  --gray-400:    #9ca3af;
+  --gray-600:    #4b5563;
+  --gray-800:    #1f2937;
+  --radius:      8px;
+  --input-h:     36px;
+  --font:        'Hiragino Kaku Gothic Pro', 'Yu Gothic UI', Meiryo, sans-serif;
+  --mono:        'Courier New', Consolas, monospace;
+}
+body {
+  font-family: var(--font);
+  background: var(--gray-100);
+  color: var(--gray-800);
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+/* ─── Header ─── */
+.app-header {
+  background: var(--blue-dark);
+  color: #fff;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  box-shadow: 0 2px 6px rgba(0,0,0,.35);
+}
+.app-header h1 { font-size: 15px; font-weight: 700; white-space: nowrap; }
+.app-header p  { font-size: 12px; color: #93c5fd; }
+.app-header code {
+  background: rgba(255,255,255,.12);
+  color: #fde68a;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: var(--mono);
+}
+
+/* ─── Layout ─── */
+.main { max-width: 900px; margin: 0 auto; padding: 20px 16px 60px; }
+
+/* ─── Card ─── */
+.card {
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.07);
+}
+
+/* ─── Component header ─── */
+.comp-header {
+  background: var(--blue-dark);
+  color: #fff;
+  padding: 0 14px;
+  height: 46px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.comp-header .comp-num {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  min-width: 90px;
+}
+.comp-header select {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 5px;
+  background: rgba(255,255,255,.12);
+  color: #fff;
+  font-size: 12px;
+  font-family: var(--font);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.comp-header select option { color: #1f2937; background: #fff; }
+.comp-header select.select-polytype { flex: 1; min-width: 0; }
+.comp-header .btn-del {
+  height: 28px;
+  padding: 0 10px;
+  background: rgba(220,38,38,.75);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: var(--font);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.comp-header .btn-del:hover { background: var(--red); }
+
+/* ─── Body ─── */
+.comp-body { padding: 16px; }
+
+/* ─── Section label ─── */
+.sec-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: var(--gray-400);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.sec-label::after { content: ''; flex: 1; height: 1px; background: var(--gray-200); }
+
+/* ─── Grid rows ─── */
+.grid {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.grid-2 { grid-template-columns: 1fr 1fr; }
+.grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+.grid-3-1 { grid-template-columns: 3fr 1fr; }
+.grid-1-1-2 { grid-template-columns: 1fr 1fr 2fr; }
+.grid-1-1-1-2 { grid-template-columns: 1fr 1fr 1fr 2fr; }
+
+/* ─── Field ─── */
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--gray-600);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.field label .hint {
+  font-weight: 400;
+  color: var(--gray-400);
+  font-size: 10.5px;
+}
+.field input,
+.field select {
+  height: var(--input-h);
+  padding: 0 10px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: var(--font);
+  color: var(--gray-800);
+  background: #fff;
+  width: 100%;
+  transition: border-color .15s, box-shadow .15s;
+}
+.field input:focus,
+.field select:focus {
+  outline: none;
+  border-color: var(--blue-mid);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+}
+.field textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-family: var(--mono);
+  color: var(--gray-800);
+  background: #fff;
+  width: 100%;
+  height: 64px;
+  resize: vertical;
+  line-height: 1.5;
+  transition: border-color .15s, box-shadow .15s;
+}
+.field textarea:focus {
+  outline: none;
+  border-color: var(--blue-mid);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+}
+.field.smiles textarea {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #166534;
+  font-size: 12px;
+}
+.field.smiles textarea:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(13,148,136,.12);
+}
+.field-note {
+  font-size: 11px;
+  color: #b45309;
+  line-height: 1.4;
+  padding: 4px 8px;
+  background: #fffbeb;
+  border-left: 2px solid #fbbf24;
+  border-radius: 0 4px 4px 0;
+  margin-top: 2px;
+}
+
+/* ─── Element card ─── */
+.elem-card {
+  background: var(--blue-light);
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+.elem-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.elem-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--blue-mid);
+  background: #fff;
+  border: 1px solid #bfdbfe;
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+.elem-del {
+  height: 24px;
+  padding: 0 10px;
+  background: var(--red-light);
+  color: var(--red);
+  border: 1px solid #fca5a5;
+  border-radius: 5px;
+  font-size: 11px;
+  font-family: var(--font);
+  cursor: pointer;
+}
+.elem-del:hover { background: var(--red); color: #fff; border-color: var(--red); }
+
+/* ─── Buttons ─── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 36px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: var(--font);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .15s;
+  white-space: nowrap;
+}
+.btn:hover { opacity: .85; }
+.btn-primary { background: var(--blue-mid); color: #fff; }
+.btn-success { background: #059669; color: #fff; }
+.btn-outline {
+  background: #fff;
+  color: var(--blue-mid);
+  border: 1px solid var(--blue-mid);
+}
+.btn-sm {
+  height: 30px;
+  padding: 0 12px;
+  font-size: 12px;
+  border-radius: 5px;
+}
+.btn-add-elem {
+  background: #fff;
+  color: var(--gray-600);
+  border: 1px dashed var(--gray-400);
+  width: 100%;
+  margin-top: 6px;
+  height: 32px;
+  font-size: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--font);
+}
+.btn-add-elem:hover { background: var(--gray-50); border-color: var(--blue-mid); color: var(--blue-mid); }
+
+/* ─── Bottom actions ─── */
+.actions {
+  display: flex;
+  gap: 10px;
+  margin: 6px 0 24px;
+}
+
+/* ─── Output ─── */
+.out-section { margin-top: 4px; }
+.out-card {
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.out-header {
+  background: var(--gray-800);
+  color: #e5e7eb;
+  height: 38px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+}
+.out-header .comp-label { font-weight: 700; color: #93c5fd; }
+.out-header .dropdown-info { color: var(--gray-400); font-size: 11.5px; }
+.btn-copy {
+  height: 26px;
+  padding: 0 12px;
+  background: rgba(255,255,255,.1);
+  color: #e5e7eb;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 5px;
+  font-size: 11.5px;
+  font-family: var(--font);
+  cursor: pointer;
+}
+.btn-copy:hover { background: rgba(255,255,255,.2); }
+.btn-copy.done { background: #065f46; border-color: #065f46; color: #a7f3d0; }
+pre.json-pre {
+  padding: 14px 16px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--gray-800);
+  background: var(--gray-50);
+  overflow-x: auto;
+  border-top: 1px solid var(--gray-200);
+}
+.out-empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--gray-400);
+  font-size: 13px;
+}
+@keyframes flash-update {
+  0%   { background: #fef9c3; border-color: #f59e0b; }
+  100% { background: #fff;    border-color: var(--gray-200); }
+}
+.field-flashed input, .field-flashed select {
+  animation: flash-update .8s ease-out forwards;
+}
+
+/* ─── Guide panel ─── */
+.guide-panel {
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+.guide-toggle {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gray-800);
+  text-align: left;
+}
+.guide-toggle:hover { background: var(--gray-50); }
+.guide-toggle .arrow { font-size: 11px; color: var(--gray-400); transition: transform .2s; }
+.guide-toggle.open .arrow { transform: rotate(180deg); }
+.guide-body { display: none; padding: 0 16px 16px; border-top: 1px solid var(--gray-200); }
+.guide-body.open { display: block; }
+.guide-section { margin-top: 14px; }
+.guide-section h4 { font-size: 11.5px; font-weight: 700; color: var(--gray-600); margin-bottom: 8px; }
+.guide-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.guide-table th {
+  background: var(--gray-100);
+  padding: 6px 10px;
+  text-align: left;
+  font-weight: 700;
+  color: var(--gray-600);
+  border-bottom: 1px solid var(--gray-200);
+}
+.guide-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--gray-100);
+  vertical-align: top;
+}
+.guide-table tr:last-child td { border-bottom: none; }
+.tag {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.tag-green  { background: #dcfce7; color: #166534; }
+.tag-blue   { background: #dbeafe; color: #1e40af; }
+.tag-orange { background: #ffedd5; color: #9a3412; }
+.tag-gray   { background: var(--gray-100); color: var(--gray-600); }
+.guide-note {
+  font-size: 11.5px;
+  color: var(--gray-600);
+  background: var(--gray-50);
+  border-left: 3px solid var(--blue-mid);
+  padding: 8px 12px;
+  margin-top: 12px;
+  line-height: 1.6;
+}
+.guide-note code {
+  font-family: var(--mono);
+  background: var(--gray-200);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+/* ─── Polymer search panel ─── */
+.psearch-panel {
+  background: #fff;
+  border: 1.5px solid var(--blue-mid);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.psearch-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--blue-light);
+}
+.psearch-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--blue-dark);
+  white-space: nowrap;
+}
+.psearch-bar input {
+  flex: 1;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: var(--font);
+  background: #fff;
+  min-width: 0;
+}
+.psearch-bar input:focus { outline: none; border-color: var(--blue-mid); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+.psearch-clear {
+  height: 34px;
+  width: 34px;
+  background: #fff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--gray-400);
+  flex-shrink: 0;
+}
+.psearch-clear:hover { background: var(--red-light); color: var(--red); border-color: #fca5a5; }
+#psearch-results { padding: 0 14px 4px; }
+.psearch-empty {
+  padding: 12px 0;
+  font-size: 13px;
+  color: var(--gray-400);
+  text-align: center;
+}
+.psearch-card {
+  border: 1px solid var(--gray-200);
+  border-radius: 7px;
+  margin: 8px 0;
+  overflow: hidden;
+}
+.psearch-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  background: var(--gray-50);
+  border-bottom: 1px solid var(--gray-200);
+}
+.psearch-key {
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--blue-dark);
+  color: #fff;
+  padding: 2px 9px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+.psearch-fullname {
+  font-size: 12px;
+  color: var(--gray-600);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.psearch-add-btn {
+  height: 28px;
+  padding: 0 14px;
+  background: var(--blue-mid);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: var(--font);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.psearch-add-btn:hover { background: #1d4ed8; }
+.psearch-elem-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 12px;
+  border-top: 1px solid var(--gray-100);
+  font-size: 12px;
+}
+.psearch-elem-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--blue-mid);
+  background: var(--blue-light);
+  border: 1px solid #bfdbfe;
+  padding: 1px 7px;
+  border-radius: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.psearch-elem-name {
+  color: var(--gray-600);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.psearch-smiles {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: #166534;
+  background: #f0fdf4;
+  padding: 1px 6px;
+  border-radius: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ─── PubChem search row ─── */
+.pubchem-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+.pubchem-row .pc-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0369a1;
+  white-space: nowrap;
+}
+.pubchem-row input {
+  flex: 1;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid #bae6fd;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: var(--font);
+  background: #fff;
+  min-width: 0;
+}
+.pubchem-row input:focus { outline: none; border-color: #0284c7; }
+.pubchem-row .pc-btn {
+  height: 28px;
+  padding: 0 12px;
+  background: #0284c7;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: var(--font);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.pubchem-row .pc-btn:hover { background: #0369a1; }
+.pubchem-status {
+  font-size: 11px;
+  color: var(--gray-400);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+/* ─── Structure button ─── */
+.btn-struct {
+  height: 26px;
+  padding: 0 12px;
+  background: #fff;
+  color: var(--teal);
+  border: 1px solid var(--teal);
+  border-radius: 5px;
+  font-size: 11.5px;
+  font-family: var(--font);
+  cursor: pointer;
+  margin-top: 6px;
+}
+.btn-struct:hover { background: #f0fdfa; }
+
+/* ─── Structure modal ─── */
+.struct-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.struct-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+}
+.struct-modal canvas {
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  width: 100%;
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <h1>ポリマー組成 BigSMILES 入力ツール</h1>
+  <p>結合子: <code>[$]</code>（BigSMILES準拠）　|　Excelの free text 欄に貼るJSONを生成します</p>
+</header>
+
+<div class="main">
+
+  <!-- ガイド -->
+  <div class="guide-panel">
+    <button class="guide-toggle" onclick="toggleGuide(this)">
+      📋 ポリマー種別ガイド — element の数と記入方法
+      <span class="arrow">▼</span>
+    </button>
+    <div class="guide-body">
+      <div class="guide-section">
+        <h4>重合タイプ別の入力方法</h4>
+        <table class="guide-table">
+          <thead>
+            <tr>
+              <th>入力方法</th>
+              <th>重合タイプ</th>
+              <th>ポリマー（リスト内）</th>
+              <th>SMILESの方針</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="tag tag-green">element × 2</span><br><small>2種のモノマーを交互連結</small></td>
+              <td>縮合重合<br>（線形）</td>
+              <td><b>PI</b>（ジアミン＋二無水物）<br><b>PBO</b>（ジアミン＋ジカルボン酸）<br><b>LCP</b>（ジオール/ヒドロキシ酸＋ジカルボン酸）<br><b>PU</b>（ジオール＋ジイソシアネート）</td>
+              <td>各モノマーの「ポリマー中での繰り返し単位」をelement #1・#2に入力。[$] = 隣のモノマーとの結合点</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-blue">element × 1</span><br><small>1種の繰り返し単位</small></td>
+              <td>付加重合<br>（1成分）</td>
+              <td><b>PPE / PPO</b>（エーテル）, <b>PPS</b>（スルフィド）, <b>PMPS</b>（ジメチルスルフィド）<br><b>PS</b>, <b>PB</b>, <b>PO</b>, <b>Fluoropolymer</b>, <b>Acrylic</b>, <b>Phenoxy resin</b></td>
+              <td>繰り返し単位のSMILES。[$] を両端に付ける</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-blue">element × 2</span><br><small>2種の繰り返し単位</small></td>
+              <td>共重合<br>（ラジカル等）</td>
+              <td><b>SMA</b>（スチレン＋無水マレイン酸）<br><b>PBE</b>（エチレン＋プロピレン）<br><b>PMPS-PPO</b>（スルフィド＋エーテル交互）</td>
+              <td>各モノマーの繰り返し単位を element #1・#2に入力。weight ratioで比率を記入</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-orange">element × 1（モノマー）</span><br><small>反応前構造を記録</small></td>
+              <td>熱硬化性<br>（架橋ネットワーク）</td>
+              <td><b>BMI</b>, <b>CE</b>, <b>Epoxy</b>, <b>PBz</b></td>
+              <td>硬化後は3次元網目構造で1本のSMILESで表現不可。反応前モノマーSMILESを記録し、Polymerizable groupを明記</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="guide-note">
+        <b>[$] の意味：</b>隣の繰り返し単位・モノマーとの結合点。例えば PPE の <code>[$]Oc1c(C)cc([$])cc1C</code> は、左の[$]が前の単位のArと、右の[$]が次の単位のOと結合する。<br>
+        <b>縮合重合の連結イメージ：</b>PI の場合、ODA element の [$] と PMDA imide element の N-[$] がつながり、…–Ph–O–Ph–N(imide ring)–Ph–N(imide ring)–… という鎖を形成する。<br>
+        <b>⚠ マーク付きSMILS：</b>代表構造の例示。論文の具体的な化学構造を確認・修正してください。
+      </div>
+    </div>
+  </div>
+
+  <!-- ポリマー検索パネル -->
+  <div class="psearch-panel" id="psearch-panel">
+    <div class="psearch-bar">
+      <span class="psearch-label">🔍 ポリマー名検索</span>
+      <input type="text" id="psearch-input"
+        placeholder="略称・名称を入力（例: PPO, polystyrene, polyimide）"
+        oninput="polymerSearch(this.value)"
+        onkeydown="if(event.key==='Escape')clearPolymerSearch()">
+      <button class="psearch-clear" onclick="clearPolymerSearch()" title="クリア">✕</button>
+    </div>
+    <div id="psearch-results"></div>
+  </div>
+
+  <div id="componentsContainer"></div>
+
+  <div class="actions">
+    <button class="btn btn-outline" onclick="addComponent()">＋ component を追加</button>
+    <button class="btn btn-success" onclick="generateAll()">▶ JSON を生成</button>
+    <button class="btn" style="background:#fff;border:1px solid #dc2626;color:#dc2626;" onclick="clearAll()">✕ すべてクリア</button>
+  </div>
+
+  <div class="out-section">
+    <div class="sec-label" style="margin-bottom:12px;">生成されたJSON（Excelの free text 欄に貼り付け）</div>
+    <div id="outputContainer">
+      <div class="out-empty">「▶ JSON を生成」ボタンを押すと、ここに出力されます</div>
+    </div>
+  </div>
+</div>
+
+<script src="polymer_db.js"></script>
+<script>
+// =============================================
+// State
+// =============================================
+let compCounter  = 0;
+let elemCounters = {};
+
+// =============================================
+// Component
+// =============================================
+function addComponent() {
+  compCounter++;
+  const id = compCounter;
+  elemCounters[id] = 0;
+
+  const opts = POLYMER_DB.filter(p => !p.dropdownHidden).map(p => `<option value="${p.key}">${esc(p.label)}</option>`).join('');
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.id = `comp-${id}`;
+  card.innerHTML = `
+    <div class="comp-header">
+      <span class="comp-num">component #${id}</span>
+      <select id="reactive-${id}">
+        <option value="Reactive">Reactive</option>
+        <option value="Inert">Inert</option>
+      </select>
+      <select id="polytype-${id}" class="select-polytype" onchange="onTypeChange(${id})">
+        <option value="">── ポリマー種別を選択 ──</option>
+        ${opts}
+      </select>
+      <button class="btn-del" onclick="removeComp(${id})">削除</button>
+    </div>
+    <div class="comp-body">
+      <div class="sec-label">コンポーネント情報（JSON出力項目）</div>
+
+      <div class="grid grid-3-1" style="margin-bottom:10px;">
+        <div class="field">
+          <label>name（ポリマー名）</label>
+          <input type="text" id="c-name-${id}" placeholder="例: 4,4'-bismaleimidodiphenylmethane">
+        </div>
+        <div class="field">
+          <label>MW <span class="hint">(g/mol)</span></label>
+          <input type="number" id="c-mw-${id}" placeholder="例: 50000">
+        </div>
+      </div>
+
+      <div class="grid grid-4">
+        <div class="field">
+          <label>weight ratio <span class="hint">（論文記載値）</span></label>
+          <input type="number" step="any" id="c-wr-${id}" placeholder="例: 20">
+        </div>
+        <div class="field">
+          <label>molar ratio <span class="hint">（論文記載値）</span></label>
+          <input type="number" step="any" id="c-mr-${id}" placeholder="例: 1">
+        </div>
+        <div class="field">
+          <label>commercial name</label>
+          <input type="text" id="c-com-${id}" placeholder="例: SA9000 (SABIC)">
+        </div>
+        <div class="field" id="cls-field-${id}">
+          <label>種類 <span class="hint" id="cls-hint-${id}">（ポリマー種別から自動設定）</span></label>
+          <select id="c-cls-${id}">
+            <option value="Homopolymer">Homopolymer</option>
+            <option value="Copolymer">Copolymer</option>
+            <option value="Block">Block</option>
+            <option value="Graft">Graft</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="sec-label" style="margin-top:14px;">繰り返し単位（element）</div>
+      <div id="elems-${id}"></div>
+      <button class="btn-add-elem" onclick="addElem(${id})">＋ element を追加</button>
+    </div>
+  `;
+  document.getElementById('componentsContainer').appendChild(card);
+}
+
+function removeComp(id) {
+  document.getElementById(`comp-${id}`)?.remove();
+}
+
+function onTypeChange(id) {
+  const key = document.getElementById(`polytype-${id}`).value;
+  const p = POLYMER_DB.find(d => d.key === key);
+  if (!p) return;
+
+  document.getElementById(`elems-${id}`).innerHTML = '';
+  elemCounters[id] = 0;
+
+  const nameEl = document.getElementById(`c-name-${id}`);
+  if (!nameEl.value && p.displayName) nameEl.value = p.displayName;
+
+  const clsSel = document.getElementById(`c-cls-${id}`);
+  clsSel.value = p.defaultClass;
+
+  // 自動設定をフラッシュで知らせる
+  const clsField = document.getElementById(`cls-field-${id}`);
+  clsField.classList.remove('field-flashed');
+  void clsField.offsetWidth; // reflow
+  clsField.classList.add('field-flashed');
+
+  p.elements.forEach(el => addElem(id, el));
+}
+
+// =============================================
+// Element
+// =============================================
+function addElem(compId, data = {}) {
+  elemCounters[compId]++;
+  const n = elemCounters[compId];
+  const k = `${compId}-${n}`;
+
+  const noteHtml = data.note
+    ? `<div class="field-note">${esc(data.note)}</div>`
+    : '';
+
+  const div = document.createElement('div');
+  div.className = 'elem-card';
+  div.id = `elem-${k}`;
+  div.innerHTML = `
+    <div class="elem-header">
+      <span class="elem-badge">element #${n}</span>
+      <button class="elem-del" onclick="removeElem('${k}')">削除</button>
+    </div>
+
+    <div class="grid" style="grid-template-columns:1fr; margin-bottom:8px;">
+      <div class="field">
+        <label>element name（繰り返し単位の名称）</label>
+        <input type="text" id="e-name-${k}" value="${esc(data.name||'')}"
+          placeholder="例: 2,6-dimethyl-1,4-phenylene ether unit">
+      </div>
+    </div>
+
+    <div class="pubchem-row">
+      <span class="pc-label">🔍 PubChem</span>
+      <input type="text" id="pubchem-name-${k}"
+        placeholder="化合物名で検索 → SMILES を自動入力（例: pyromellitic dianhydride）"
+        onkeydown="if(event.key==='Enter')pubchemSearch('${k}')">
+      <button class="pc-btn" onclick="pubchemSearch('${k}')">検索</button>
+      <span class="pubchem-status" id="pubchem-status-${k}"></span>
+    </div>
+
+    <div class="grid" style="grid-template-columns:1fr; margin-bottom:10px;">
+      <div class="field smiles">
+        <label>smiles data　<span class="hint">[$] = 結合点（BigSMILES準拠）　※PubChem取得後は [$] を手動で追加してください</span></label>
+        <textarea id="e-smi-${k}" placeholder="例: [$]Oc1c(C)cc([$])cc1C">${esc(data.smiles||'')}</textarea>
+        ${noteHtml}
+        <button class="btn-struct" onclick="showStructure('${k}')">📐 構造を確認</button>
+      </div>
+    </div>
+
+    <div class="grid grid-3">
+      <div class="field">
+        <label>Polymerizable group <span class="hint">（なければ空欄）</span></label>
+        <input type="text" id="e-pg-${k}" value="${esc(data.polyGroup||'')}"
+          placeholder="例: maleimide">
+      </div>
+      <div class="field">
+        <label>MW <span class="hint">(g/mol)</span></label>
+        <input type="number" id="e-mw-${k}" placeholder="">
+      </div>
+      <div class="field">
+        <label>molecular volume <span class="hint">(cm³/mol)</span></label>
+        <input type="number" step="any" id="e-vol-${k}" placeholder="">
+      </div>
+    </div>
+
+    <div class="grid grid-4" style="margin-top:10px;">
+      <div class="field">
+        <label>weight ratio <span class="hint">（論文記載値）</span></label>
+        <input type="number" step="any" id="e-wr-${k}" placeholder="">
+      </div>
+      <div class="field">
+        <label>molar ratio <span class="hint">（論文記載値）</span></label>
+        <input type="number" step="any" id="e-mr-${k}" placeholder="">
+      </div>
+      <div class="field"></div>
+      <div class="field"></div>
+    </div>
+  `;
+  document.getElementById(`elems-${compId}`).appendChild(div);
+}
+
+function removeElem(k) {
+  document.getElementById(`elem-${k}`)?.remove();
+}
+
+// =============================================
+// JSON generation
+// =============================================
+function str(id) {
+  const v = document.getElementById(id)?.value?.trim();
+  return v || null;
+}
+function num(id) {
+  const v = document.getElementById(id)?.value?.trim();
+  if (!v) return null;
+  const n = parseFloat(v);
+  return isNaN(n) ? null : n;
+}
+
+function generateAll() {
+  const cards = Array.from(document.querySelectorAll('#componentsContainer .card'));
+  const out = document.getElementById('outputContainer');
+
+  if (!cards.length) {
+    out.innerHTML = '<div class="out-empty">コンポーネントを追加してください</div>';
+    return;
+  }
+
+  out.innerHTML = '';
+
+  cards.forEach((card, idx) => {
+    const id = parseInt(card.id.replace('comp-', ''));
+    const reactive = str(`reactive-${id}`) || 'Reactive';
+    const polytype  = str(`polytype-${id}`) || '';
+    const obj = {};
+
+    const name = str(`c-name-${id}`); if (name) obj['name'] = name;
+    const mw   = num(`c-mw-${id}`);   if (mw   != null) obj['MW(g/mol)'] = mw;
+    const wr   = num(`c-wr-${id}`);   if (wr   != null) obj['weight ratio'] = wr;
+    const mr   = num(`c-mr-${id}`);   if (mr   != null) obj['molar ratio'] = mr;
+    const com  = str(`c-com-${id}`);  if (com)  obj['commercial name'] = com;
+    const cls  = str(`c-cls-${id}`);  if (cls)  obj['Homopolymer/Copolymer/Block/Graft'] = cls;
+
+    Array.from(document.querySelectorAll(`#elems-${id} .elem-card`)).forEach((ec, ei) => {
+      const k = ec.id.replace('elem-', '');
+      const e = {};
+      const en  = str(`e-name-${k}`); if (en)       e['name'] = en;
+      const es  = str(`e-smi-${k}`);  if (es)       e['smiles data'] = es;
+      const epg = str(`e-pg-${k}`);   if (epg)      e['Polymerizable group'] = epg;
+      const emw = num(`e-mw-${k}`);   if (emw!=null) e['MW(g/mol)'] = emw;
+      const ev  = num(`e-vol-${k}`);  if (ev !=null) e['molecular volume(cm3/mol)'] = ev;
+      const ewr = num(`e-wr-${k}`);   if (ewr!=null) e['weight ratio'] = ewr;
+      const emr = num(`e-mr-${k}`);   if (emr!=null) e['molar ratio'] = emr;
+      if (Object.keys(e).length) obj[`element#${ei+1}`] = e;
+    });
+
+    const json = JSON.stringify(obj, null, 2);
+    const reactiveColor = reactive === 'Inert' ? '#6b7280' : '#059669';
+    const reactiveIcon  = reactive === 'Inert' ? '○' : '◎';
+
+    // BigSMILES連結文字列を生成
+    const elemSmilesList = Array.from(document.querySelectorAll(`#elems-${id} .elem-card`))
+      .map(ec => str(`e-smi-${ec.id.replace('elem-', '')}`))
+      .filter(s => s);
+    const bigsmiles = elemSmilesList.length > 0
+      ? `{[]${elemSmilesList.join(',')}[]}`
+      : null;
+
+    // element数とclsの整合性チェック
+    const elemCount = Object.keys(obj).filter(k => k.startsWith('element#')).length;
+    const clsValue  = obj['Homopolymer/Copolymer/Block/Graft'] || '';
+    const clsWarn   = (elemCount >= 2 && clsValue === 'Homopolymer')
+      ? `<div style="background:#fef3c7;border-left:3px solid #f59e0b;padding:7px 14px;font-size:11.5px;color:#92400e;">
+           ⚠ element が${elemCount}つありますが種類が「Homopolymer」のままです。Copolymer / Block / Graft のいずれかに変更してください。
+         </div>`
+      : '';
+
+    const bigsmilesHtml = bigsmiles ? `
+      <div style="border-top:1px solid #e5e7eb;">
+        <div style="background:#f0fdf4;padding:7px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <span style="font-size:11.5px;font-weight:700;color:#166534;">BigSMILES文字列（全element連結）</span>
+          <button class="btn-copy" id="cp-bs-${id}" onclick="doCopyText('cp-bs-${id}','bs-${id}')">文字列をコピー</button>
+        </div>
+        <pre class="json-pre" id="bs-${id}" style="background:#f0fdf4;color:#166534;border-top:1px solid #bbf7d0;">${esc(bigsmiles)}</pre>
+      </div>` : '';
+
+    const block = document.createElement('div');
+    block.className = 'out-card';
+    block.innerHTML = `
+      <div class="out-header">
+        <div>
+          <span class="comp-label">component #${idx+1}</span>
+          ${polytype ? `<span class="dropdown-info">　${esc(polytype)}</span>` : ''}
+        </div>
+        <button class="btn-copy" id="cp-${id}" onclick="doCopy(${id},this)">JSONをコピー</button>
+      </div>
+      <div style="background:#f8fafc;border-bottom:1px solid #e5e7eb;padding:8px 16px;display:flex;gap:24px;font-size:12px;flex-wrap:wrap;">
+        <div>
+          <span style="color:#9ca3af;font-weight:600;">Excelドロップダウン①</span>
+          <span style="margin-left:8px;font-weight:700;color:${reactiveColor};">${reactiveIcon} ${esc(reactive)}</span>
+        </div>
+        <div>
+          <span style="color:#9ca3af;font-weight:600;">Excelドロップダウン②</span>
+          <span style="margin-left:8px;font-weight:700;color:#1e40af;">${polytype ? esc(polytype) : '（未選択）'}</span>
+        </div>
+        <div style="margin-left:auto;color:#9ca3af;font-size:11px;">↓ このJSONをfree text列に貼る</div>
+      </div>
+      ${clsWarn}
+      <pre class="json-pre" id="json-${id}">${esc(json)}</pre>
+      ${bigsmilesHtml}
+    `;
+    out.appendChild(block);
+  });
+}
+
+function doCopy(id, btn) {
+  const text = document.getElementById(`json-${id}`)?.textContent;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ コピー済み';
+    btn.classList.add('done');
+    setTimeout(() => { btn.textContent = 'JSONをコピー'; btn.classList.remove('done'); }, 2000);
+  });
+}
+
+function doCopyText(btnId, preId) {
+  const text = document.getElementById(preId)?.textContent;
+  const btn  = document.getElementById(btnId);
+  if (!text || !btn) return;
+  navigator.clipboard.writeText(text.trim()).then(() => {
+    btn.textContent = '✓ コピー済み';
+    btn.classList.add('done');
+    setTimeout(() => { btn.textContent = '文字列をコピー'; btn.classList.remove('done'); }, 2000);
+  });
+}
+
+function esc(s) {
+  return String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toggleGuide(btn) {
+  btn.classList.toggle('open');
+  btn.nextElementSibling.classList.toggle('open');
+}
+
+// =============================================
+// ポリマー名検索
+// =============================================
+function polymerSearch(q) {
+  const results = document.getElementById('psearch-results');
+  q = (q || '').trim().toLowerCase();
+  if (!q) { results.innerHTML = ''; return; }
+
+  const hits = POLYMER_DB.filter(p =>
+    p.key !== 'Other' && p.key !== 'Crosslinker' && (
+      p.key.toLowerCase().includes(q) ||
+      p.label.toLowerCase().includes(q) ||
+      (p.displayName || '').toLowerCase().includes(q) ||
+      (p.aliases || []).some(a => a.toLowerCase().includes(q))
+    )
+  );
+
+  if (!hits.length) {
+    results.innerHTML = `<div class="psearch-empty">「${esc(q)}」は内部DBに見つかりませんでした。<br>
+      下の element カード内の <b>🔍 PubChem</b> 欄でモノマー名を検索するか、「Other」で手動入力してください。</div>`;
+    return;
+  }
+
+  results.innerHTML = hits.map(p => {
+    const matchedAlias = (p.aliases || []).filter(a => a.toLowerCase().includes(q));
+    const aliasHtml = matchedAlias.length
+      ? `<div style="padding:3px 12px 5px;font-size:11px;color:var(--gray-400);">
+           製品名・別名ヒット: <span style="color:#92400e;font-weight:600;">${matchedAlias.map(a => esc(a)).join('、')}</span>
+         </div>`
+      : '';
+    return `
+    <div class="psearch-card">
+      <div class="psearch-card-header">
+        <span class="psearch-key">${esc(p.key)}</span>
+        <span class="psearch-fullname">${esc(p.displayName || p.label)}</span>
+        <button class="psearch-add-btn" onclick="addComponentFromSearch('${esc(p.key)}')">+ component に追加</button>
+      </div>
+      ${aliasHtml}
+      ${p.elements.map((el, i) => `
+        <div class="psearch-elem-row">
+          <span class="psearch-elem-badge">element #${i+1}</span>
+          <span class="psearch-elem-name">${esc(el.name)}</span>
+          <span class="psearch-smiles">${esc(el.smiles || '（SMILES未設定）')}</span>
+        </div>
+      `).join('')}
+    </div>`;
+  }).join('');
+}
+
+function clearPolymerSearch() {
+  document.getElementById('psearch-input').value = '';
+  document.getElementById('psearch-results').innerHTML = '';
+}
+
+function addComponentFromSearch(key) {
+  addComponent();
+  const cards = document.querySelectorAll('#componentsContainer .card');
+  const last  = cards[cards.length - 1];
+  const id    = parseInt(last.id.replace('comp-', ''));
+  const sel   = document.getElementById(`polytype-${id}`);
+
+  if (sel) {
+    // dropdownHiddenのエントリは選択肢にないので、動的にoptionを追加してからonTypeChange
+    if (!Array.from(sel.options).some(o => o.value === key)) {
+      const p = POLYMER_DB.find(d => d.key === key);
+      if (p) {
+        const opt = document.createElement('option');
+        opt.value = p.key;
+        opt.textContent = p.label;
+        sel.appendChild(opt);
+      }
+    }
+    sel.value = key;
+    onTypeChange(id);
+  }
+  last.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  clearPolymerSearch();
+}
+
+// =============================================
+// PubChem SMILES 検索
+// =============================================
+async function pubchemSearch(k) {
+  const nameEl   = document.getElementById(`pubchem-name-${k}`);
+  const statusEl = document.getElementById(`pubchem-status-${k}`);
+  const name = nameEl.value.trim();
+  if (!name) return;
+
+  statusEl.textContent = '検索中…';
+  statusEl.style.color = 'var(--gray-400)';
+
+  try {
+    const res = await fetch(
+      `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(name)}/property/CanonicalSMILES,IUPACName/JSON`
+    );
+    if (!res.ok) throw new Error('見つかりませんでした');
+    const data = await res.json();
+    const props = data.PropertyTable?.Properties?.[0];
+    if (!props?.CanonicalSMILES) throw new Error('SMILES取得不可');
+
+    document.getElementById(`e-smi-${k}`).value = props.CanonicalSMILES;
+    statusEl.textContent = '✓ ' + (props.IUPACName || '取得完了');
+    statusEl.style.color = '#166534';
+  } catch(e) {
+    statusEl.textContent = '✗ ' + e.message;
+    statusEl.style.color = 'var(--red)';
+  }
+}
+
+// =============================================
+// 構造表示（SmilesDrawer）
+// =============================================
+let _sdLoading = false;
+function ensureSmilesDrawer(cb) {
+  if (typeof SmilesDrawer !== 'undefined') { cb(); return; }
+  if (_sdLoading) { setTimeout(() => ensureSmilesDrawer(cb), 150); return; }
+  _sdLoading = true;
+  const s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/smiles-drawer@2.1.7/dist/smiles-drawer.min.js';
+  s.onload  = cb;
+  s.onerror = () => {
+    _sdLoading = false;
+    alert('SmilesDrawer の読み込みに失敗しました。\nインターネット接続を確認してください。');
+  };
+  document.head.appendChild(s);
+}
+
+function showStructure(k) {
+  const smiles = document.getElementById(`e-smi-${k}`)?.value?.trim();
+  if (!smiles) { alert('SMILES が入力されていません'); return; }
+
+  const cleanSmiles = smiles.replace(/\[\$\]/g, '*');
+  const canvasId = `sc-${k}-${Date.now()}`;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'struct-overlay';
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div class="struct-modal">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span style="font-weight:700;font-size:14px;">構造確認</span>
+        <button onclick="this.closest('.struct-overlay').remove()"
+          style="background:none;border:none;font-size:22px;cursor:pointer;line-height:1;color:var(--gray-400);">×</button>
+      </div>
+      <canvas id="${canvasId}" width="440" height="280"></canvas>
+      <div style="font-size:11px;color:var(--gray-600);margin-top:8px;font-family:var(--mono);word-break:break-all;">${esc(smiles)}</div>
+      <div style="font-size:10.5px;color:var(--gray-400);margin-top:4px;">[$] は描画用に * に置換しています。正確な構造は PubChem で確認してください。</div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  ensureSmilesDrawer(() => {
+    try {
+      const drawer = new SmilesDrawer.Drawer({ width: 440, height: 280, bondThickness: 1.4, fontSizeLarge: 7 });
+      SmilesDrawer.parse(cleanSmiles,
+        tree => drawer.draw(tree, canvasId, 'light'),
+        err  => {
+          const c = document.getElementById(canvasId);
+          if (c) c.insertAdjacentHTML('afterend',
+            `<div style="color:var(--red);font-size:12px;margin-top:8px;">⚠ 描画エラー: ${err}<br>SMILES が正しいか確認してください。</div>`);
+        }
+      );
+    } catch(e) { console.error(e); }
+  });
+}
+
+function clearAll() {
+  if (!confirm('入力内容とJSON出力をすべてクリアします。よろしいですか？')) return;
+  compCounter = 0;
+  elemCounters = {};
+  document.getElementById('componentsContainer').innerHTML = '';
+  document.getElementById('outputContainer').innerHTML =
+    '<div class="out-empty">「▶ JSON を生成」ボタンを押すと、ここに出力されます</div>';
+  addComponent();
+}
+
+// 初期表示
+addComponent();
+</script>
+</body>
+</html>
