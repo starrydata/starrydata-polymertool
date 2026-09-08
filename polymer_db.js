@@ -49,8 +49,15 @@ const POLYMER_DB = [
   {
     key: 'CE', label: 'CE|Cyanate ester resin',
     displayName: 'bisphenol A dicyanate (BADCy)', defaultClass: 'Homopolymer',
-    aliases: ['BADCy', 'Primaset', 'PT-30', 'PT-60', 'AroCy', 'AroCy B-10', 'AroCy L-10', 'Lonza PT', 'Cytec 5578', 'cyanate ester', 'polycyanurate'],
+    aliases: ['BADCy', 'Primaset', 'PT-30', 'PT-60', 'AroCy', 'AroCy B-10', 'AroCy L-10', 'Lonza PT', 'Cytec 5578', 'cyanate ester', 'polycyanurate', '2,2-bis(4-cyanatophenyl)propane'],
     elements: [{ name: 'bisphenol A dicyanate（反応前モノマー構造）', smiles: 'N#COc1ccc(C(C)(C)c2ccc(OC#N)cc2)cc1', polyGroup: 'cyanate ester', note: '⚠ 反応前モノマー構造。反応後はシアネート基3つが三量体化してトリアジン環を形成' }]
+  },
+  {
+    key: 'DABPA', label: 'DABPA|Bisallyl bisphenol A',
+    displayName: "O,O'-diallyl bisphenol A", defaultClass: 'Homopolymer',
+    dropdownHidden: true,
+    aliases: ['bisallyl bisphenol A', 'diallyl bisphenol A', 'allyl bisphenol A', 'BABA', 'DABA'],
+    elements: [{ name: "O,O'-diallyl bisphenol A（反応前モノマー構造）", smiles: 'C=CCOc1ccc(C(C)(C)c2ccc(OCC=C)cc2)cc1', polyGroup: 'allyl ether', note: '⚠ 反応前モノマー構造。CE・BMI 系の反応性共モノマー。2つのアリルエーテル基がBMIのマレイミドとen反応し架橋網目に取り込まれる' }]
   },
   {
     key: 'Phenoxy', label: 'Phenoxy resin|high-molecular-weight BPA epoxy',
@@ -192,6 +199,17 @@ const POLYMER_DB = [
     displayName: 'poly(oxy-1,4-phenylene-sulfonyl-1,4-phenylene) [PESU]', defaultClass: 'Homopolymer',
     aliases: ['PESU', 'Ultrason E', 'Victrex ES', 'Sumikaexcel PES', 'Veradel', 'Gafone', 'polyethersulfone', 'polyether sulfone'],
     elements: [{ name: 'oxy-phenylene-sulfonyl-phenylene unit', smiles: '[$]Oc1ccc(S(=O)(=O)c2ccc([$])cc2)cc1', polyGroup: '', note: 'フェニレンエーテル＋スルホン繰り返し単位。Ultrason E・Victrex ES 型。ビスフェノールAなし' }]
+  },
+  {
+    key: 'PAES-BHF', label: 'PAES-BHF|Poly(arylene ether sulfone) with fluorene',
+    displayName: "poly(9,9-bis(4-phenyleneoxy)fluorene-alt-4,4'-diphenylene sulfone)",
+    defaultClass: 'Copolymer',
+    dropdownHidden: true,
+    aliases: ['BHF', 'DFDPS', '9,9-bis(4-hydroxyphenyl)fluorene', 'di-(4-fluorophenyl)sulfone', '4,4\'-difluorodiphenyl sulfone', 'fluorene PES', 'fluorene polysulfone', 'PAES', 'PAE-BHF'],
+    elements: [
+      { name: '9,9-bis(4-hydroxyphenyl)fluorene (BHF) unit', smiles: '[$]Oc1ccc(C2(c3ccc(O[$])cc3)c3ccccc3-c3ccccc32)cc1', polyGroup: '', note: 'BHF 由来フルオレンユニット。[$] = DFDPS 側フェニレンとのO-エーテル結合点' },
+      { name: 'di-(4-fluorophenyl)sulfone (DFDPS) unit', smiles: '[$]c1ccc(S(=O)(=O)c2ccc([$])cc2)cc1', polyGroup: '', note: 'DFDPS のF脱離後のジフェニルスルホンユニット。[$] = BHF 側のO-エーテル結合点' }
+    ]
   },
   {
     key: 'PSU', label: 'PSU|Polysulfone (bisphenol A type)',
