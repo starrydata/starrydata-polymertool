@@ -577,6 +577,33 @@ pre.json-pre {
   flex: 1;
   min-width: 0;
 }
+.psearch-card-pubchem { border-color: #fde68a; }
+.psearch-card-pubchem .psearch-card-header { background: #fffbeb; border-bottom-color: #fde68a; }
+.psearch-badge-pubchem {
+  font-size: 10px; font-weight: 700;
+  background: #f59e0b; color: #fff;
+  padding: 2px 7px; border-radius: 8px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.psearch-badge-custom {
+  font-size: 10px; font-weight: 700;
+  background: #d1fae5; color: #065f46;
+  border: 1px solid #6ee7b7;
+  padding: 1px 7px; border-radius: 8px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.psearch-add-btn-pubchem { background: #d97706 !important; }
+.psearch-add-btn-pubchem:hover { background: #b45309 !important; }
+.psearch-section-sep {
+  font-size: 11px; color: var(--gray-400);
+  text-align: center; padding: 6px 0 2px;
+  border-top: 1px solid var(--gray-200);
+  margin-top: 4px;
+}
+.psearch-loading {
+  font-size: 12px; color: var(--gray-400);
+  padding: 10px 0; text-align: center;
+}
 
 /* ─── PubChem search row ─── */
 .pubchem-row {
@@ -1096,8 +1123,35 @@ function toggleGuide(btn) {
 }
 
 // =============================================
-// ポリマー名検索
+// ポリマー名検索 + PubChem フォールバック + localStorage 永続化
 // =============================================
+const _CUSTOM_KEY = 'polymer_db_custom_v1';
+const _pubchemCache = new Map();
+let _pubchemCacheId = 0;
+let _searchSeq = 0;
+
+function loadCustomDB() {
+  try {
+    const customs = JSON.parse(localStorage.getItem(_CUSTOM_KEY) || '[]');
+    customs.forEach(entry => {
+      if (!POLYMER_DB.find(p => p.key === entry.key))
+        POLYMER_DB.splice(POLYMER_DB.length - 2, 0, entry);
+    });
+  } catch(e) {}
+}
+
+function saveCustomEntry(entry) {
+  try {
+    const customs = JSON.parse(localStorage.getItem(_CUSTOM_KEY) || '[]');
+    const idx = customs.findIndex(c => c.key === entry.key);
+    if (idx >= 0) customs[idx] = entry; else customs.push(entry);
+    localStorage.setItem(_CUSTOM_KEY, JSON.stringify(customs));
+  } catch(e) {}
+  const memIdx = POLYMER_DB.findIndex(p => p.key === entry.key);
+  if (memIdx < 0) POLYMER_DB.splice(POLYMER_DB.length - 2, 0, entry);
+  else POLYMER_DB[memIdx] = entry;
+}
+
 function searchOneToken(token) {
   const q = token.toLowerCase();
   const match = p =>
@@ -1140,10 +1194,13 @@ function renderResultCard(p, tok) {
          製品名・別名ヒット: <span style="color:#92400e;font-weight:600;">${matchedAlias.map(a => esc(a)).join('、')}</span>
        </div>`
     : '';
+  const customBadge = p.source === 'pubchem'
+    ? `<span class="psearch-badge-custom">カスタム登録済</span>` : '';
   return `
   <div class="psearch-card">
     <div class="psearch-card-header">
       <span class="psearch-key">${esc(p.key)}</span>
+      ${customBadge}
       <span class="psearch-fullname">${esc(p.displayName || p.label)}</span>
       <button class="psearch-add-btn" onclick="addComponentFromSearch('${esc(p.key)}')">+ component に追加</button>
     </div>
@@ -1158,32 +1215,110 @@ function renderResultCard(p, tok) {
   </div>`;
 }
 
-function polymerSearch(q) {
+async function fetchPubChemCard(tok) {
+  try {
+    const res = await fetch(
+      `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(tok)}/property/CanonicalSMILES,IUPACName/JSON`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const props = data.PropertyTable?.Properties?.[0];
+    if (!props?.CanonicalSMILES) return null;
+
+    const id = ++_pubchemCacheId;
+    const key = tok.replace(/[^A-Za-z0-9\-]/g, '').toUpperCase() || 'CUSTOM';
+    _pubchemCache.set(id, {
+      key,
+      label: `${key}|${props.IUPACName || tok}`,
+      displayName: props.IUPACName || tok,
+      defaultClass: 'Homopolymer',
+      source: 'pubchem',
+      aliases: tok.toLowerCase() !== key.toLowerCase() ? [tok] : [],
+      elements: [{
+        name: `${tok}（PubChem取得）`,
+        smiles: props.CanonicalSMILES,
+        polyGroup: '',
+        note: '⚠ PubChem 由来の化合物 SMILES。高分子繰り返し単位として使う場合は [$] の追加が必要'
+      }]
+    });
+
+    return `
+    <div class="psearch-card psearch-card-pubchem">
+      <div class="psearch-card-header">
+        <span class="psearch-key">${esc(key)}</span>
+        <span class="psearch-badge-pubchem">PubChem</span>
+        <span class="psearch-fullname">${esc(props.IUPACName || tok)}</span>
+        <button class="psearch-add-btn psearch-add-btn-pubchem" onclick="addFromPubChem(${id})">+ 登録して追加</button>
+      </div>
+      <div class="psearch-elem-row">
+        <span class="psearch-elem-badge" style="background:#fef3c7;color:#92400e;border-color:#fde68a;">化合物 SMILES</span>
+        <span class="psearch-smiles" style="background:#fffbeb;color:#92400e;">${esc(props.CanonicalSMILES)}</span>
+      </div>
+      <div style="padding:4px 12px 7px;font-size:11px;color:var(--gray-400);">
+        ⚠ 化合物構造（モノマー等）です。高分子繰り返し単位として使う場合は <code style="background:var(--gray-100);padding:1px 4px;border-radius:3px;">[$]</code> の追加が必要です。
+      </div>
+    </div>`;
+  } catch(e) { return null; }
+}
+
+function addFromPubChem(id) {
+  const entry = _pubchemCache.get(id);
+  if (!entry) return;
+  saveCustomEntry(entry);
+  addComponentFromSearch(entry.key);
+}
+
+async function polymerSearch(q) {
   const results = document.getElementById('psearch-results');
   q = (q || '').trim();
   if (!q) { results.innerHTML = ''; return; }
 
+  const seq = ++_searchSeq;
   const tokens = parsePolymerQuery(q);
   if (!tokens.length) { results.innerHTML = ''; return; }
 
   const seen = new Set();
-  const allHits = [];
+  const internalHits = [];
+  const missingTokens = [];
+
   tokens.forEach(tok => {
-    searchOneToken(tok).forEach(p => {
-      if (!seen.has(p.key)) { seen.add(p.key); allHits.push({ p, tok }); }
-    });
+    const hits = searchOneToken(tok);
+    if (hits.length) {
+      hits.forEach(p => {
+        if (!seen.has(p.key)) { seen.add(p.key); internalHits.push({ p, tok }); }
+      });
+    } else {
+      missingTokens.push(tok);
+    }
   });
 
-  if (!allHits.length) {
-    results.innerHTML = `<div class="psearch-empty">「${esc(q)}」は内部DBに見つかりませんでした。<br>
-      下の element カード内の <b>🔍 PubChem</b> 欄でモノマー名を検索するか、「Other」で手動入力してください。</div>`;
+  let html = internalHits.map(({ p, tok }) => renderResultCard(p, tok)).join('');
+
+  if (!missingTokens.length) {
+    results.innerHTML = html || `<div class="psearch-empty">「${esc(q)}」は内部DBに見つかりませんでした。</div>`;
     return;
   }
 
-  results.innerHTML = allHits.map(({ p, tok }) => renderResultCard(p, tok)).join('');
+  results.innerHTML = html +
+    `<div class="psearch-loading">PubChem 検索中… (${missingTokens.map(esc).join(', ')})</div>`;
+
+  const pubchemCards = [];
+  for (const tok of missingTokens) {
+    if (_searchSeq !== seq) return;
+    const card = await fetchPubChemCard(tok);
+    if (card) pubchemCards.push(card);
+  }
+  if (_searchSeq !== seq) return;
+
+  const pcHtml = pubchemCards.join('');
+  results.innerHTML = (html || '') + (pcHtml
+    ? `<div class="psearch-section-sep">↓ PubChem 検索結果（化合物 SMILES）</div>` + pcHtml
+    : `<div class="psearch-empty">${esc(missingTokens.join(', '))}：PubChem にも見つかりませんでした。</div>`
+  );
 }
 
 function clearPolymerSearch() {
+  ++_searchSeq;
   document.getElementById('psearch-input').value = '';
   document.getElementById('psearch-results').innerHTML = '';
 }
@@ -1310,6 +1445,7 @@ function clearAll() {
 }
 
 // 初期表示
+loadCustomDB();
 addComponent();
 </script>
 </body>
