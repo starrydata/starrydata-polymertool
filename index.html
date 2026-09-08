@@ -808,7 +808,7 @@ pre.json-pre {
     ondrop="handleImageDrop(event)">
     <div class="psearch-bar">
       <span class="psearch-label">🔍 ポリマー名検索</span>
-      <input type="text" id="psearch-input"
+      <input type="text" id="psearch-input" autocomplete="off"
         placeholder="略称・名称を入力、または構造式画像をドロップ"
         oninput="polymerSearch(this.value)"
         onkeydown="if(event.key==='Escape')clearPolymerSearch()">
