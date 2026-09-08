@@ -604,6 +604,19 @@ pre.json-pre {
   font-size: 12px; color: var(--gray-400);
   padding: 10px 0; text-align: center;
 }
+.psearch-img-btn {
+  height: 34px; width: 34px;
+  background: #fff; border: 1px solid #bfdbfe; border-radius: 6px;
+  font-size: 15px; cursor: pointer; color: var(--blue-mid); flex-shrink: 0;
+}
+.psearch-img-btn:hover { background: var(--blue-light); border-color: var(--blue-mid); }
+.psearch-panel.drag-over { border-color: #f59e0b; box-shadow: 0 0 0 2px #fde68a; }
+#psearch-img-preview {
+  display: none; align-items: center; gap: 10px;
+  padding: 8px 14px; background: #fffbeb; border-bottom: 1px solid #fde68a;
+}
+#psearch-img-preview img { max-height: 72px; max-width: 140px; border-radius: 4px; border: 1px solid #fde68a; object-fit: contain; }
+#decimer-status { font-size: 12px; color: var(--gray-400); flex: 1; }
 
 /* ─── PubChem search row ─── */
 .pubchem-row {
@@ -762,15 +775,21 @@ pre.json-pre {
   </div>
 
   <!-- ポリマー検索パネル -->
-  <div class="psearch-panel" id="psearch-panel">
+  <div class="psearch-panel" id="psearch-panel"
+    ondragover="event.preventDefault();this.classList.add('drag-over')"
+    ondragleave="this.classList.remove('drag-over')"
+    ondrop="handleImageDrop(event)">
     <div class="psearch-bar">
       <span class="psearch-label">🔍 ポリマー名検索</span>
       <input type="text" id="psearch-input"
-        placeholder="略称・名称を入力（例: PPO, polystyrene, polyimide）"
+        placeholder="略称・名称を入力、または構造式画像をドロップ"
         oninput="polymerSearch(this.value)"
         onkeydown="if(event.key==='Escape')clearPolymerSearch()">
+      <button class="psearch-img-btn" onclick="document.getElementById('imgSearchInput').click()" title="構造式画像から検索（DECIMER）">🖼</button>
       <button class="psearch-clear" onclick="clearPolymerSearch()" title="クリア">✕</button>
+      <input type="file" id="imgSearchInput" accept="image/*" style="display:none" onchange="handleImageFile(this.files[0])">
     </div>
+    <div id="psearch-img-preview"></div>
     <div id="psearch-results"></div>
   </div>
 
@@ -1242,22 +1261,7 @@ async function fetchPubChemCard(tok) {
       }]
     });
 
-    return `
-    <div class="psearch-card psearch-card-pubchem">
-      <div class="psearch-card-header">
-        <span class="psearch-key">${esc(key)}</span>
-        <span class="psearch-badge-pubchem">PubChem</span>
-        <span class="psearch-fullname">${esc(props.IUPACName || tok)}</span>
-        <button class="psearch-add-btn psearch-add-btn-pubchem" onclick="addFromPubChem(${id})">+ 登録して追加</button>
-      </div>
-      <div class="psearch-elem-row">
-        <span class="psearch-elem-badge" style="background:#fef3c7;color:#92400e;border-color:#fde68a;">化合物 SMILES</span>
-        <span class="psearch-smiles" style="background:#fffbeb;color:#92400e;">${esc(props.CanonicalSMILES)}</span>
-      </div>
-      <div style="padding:4px 12px 7px;font-size:11px;color:var(--gray-400);">
-        ⚠ 化合物構造（モノマー等）です。高分子繰り返し単位として使う場合は <code style="background:var(--gray-100);padding:1px 4px;border-radius:3px;">[$]</code> の追加が必要です。
-      </div>
-    </div>`;
+    return renderPubChemResultCard(id, key, props.IUPACName || tok, props.CanonicalSMILES);
   } catch(e) { return null; }
 }
 
@@ -1321,6 +1325,132 @@ function clearPolymerSearch() {
   ++_searchSeq;
   document.getElementById('psearch-input').value = '';
   document.getElementById('psearch-results').innerHTML = '';
+  const preview = document.getElementById('psearch-img-preview');
+  preview.style.display = 'none'; preview.innerHTML = '';
+  const fi = document.getElementById('imgSearchInput');
+  if (fi) fi.value = '';
+  document.getElementById('psearch-panel').classList.remove('drag-over');
+}
+
+// =============================================
+// 画像構造認識（DECIMER → PubChem）
+// =============================================
+function handleImageDrop(e) {
+  e.preventDefault();
+  document.getElementById('psearch-panel').classList.remove('drag-over');
+  const file = [...(e.dataTransfer.files || [])].find(f => f.type.startsWith('image/'));
+  if (file) handleImageFile(file);
+}
+
+function handleImageFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('psearch-input').value = '';
+    ++_searchSeq;
+    showImagePreview(e.target.result);
+    runStructureRecognition(e.target.result);
+  };
+  reader.readAsDataURL(file);
+}
+
+function showImagePreview(src) {
+  const preview = document.getElementById('psearch-img-preview');
+  preview.style.display = 'flex';
+  preview.innerHTML = `
+    <img src="${src}" alt="構造式プレビュー">
+    <div id="decimer-status" class="psearch-loading">DECIMER に送信中…</div>`;
+  document.getElementById('psearch-results').innerHTML = '';
+}
+
+async function runStructureRecognition(base64) {
+  const statusEl = () => document.getElementById('decimer-status');
+  try {
+    const res = await fetch('https://decimer-decimer.hf.space/run/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: [base64], fn_index: 0 })
+    });
+    if (!res.ok) throw new Error(`DECIMER エラー (HTTP ${res.status})`);
+    const json = await res.json();
+    const smiles = json?.data?.[0];
+    if (!smiles || typeof smiles !== 'string' || smiles.trim() === '')
+      throw new Error('SMILES を認識できませんでした');
+
+    if (statusEl()) {
+      statusEl().textContent = `✓ 認識完了 → ${smiles.length > 50 ? smiles.slice(0, 50) + '…' : smiles}`;
+      statusEl().style.color = '#166534';
+    }
+    await searchBySMILES(smiles.trim());
+  } catch(e) {
+    if (statusEl()) {
+      statusEl().textContent = `✗ ${e.message}`;
+      statusEl().style.color = 'var(--red)';
+    }
+    document.getElementById('psearch-results').innerHTML = `
+      <div class="psearch-empty">
+        構造認識に失敗しました（NIMS ネットワーク制限の可能性あり）。<br>
+        <a href="https://decimer.ai/" target="_blank" rel="noopener"
+          style="color:var(--blue-mid)">decimer.ai</a> で直接画像をアップロードして SMILES を取得し、
+        検索欄に貼ってください。
+      </div>`;
+  }
+}
+
+async function searchBySMILES(smiles) {
+  const results = document.getElementById('psearch-results');
+  results.innerHTML = `<div class="psearch-loading">PubChem で化合物を照合中…</div>`;
+  try {
+    const res = await fetch(
+      `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/${encodeURIComponent(smiles)}/property/CanonicalSMILES,IUPACName/JSON`
+    );
+    if (!res.ok) throw new Error('not found');
+    const data = await res.json();
+    const props = data.PropertyTable?.Properties?.[0];
+    if (!props?.CanonicalSMILES) throw new Error('not found');
+
+    const iupac = props.IUPACName || '（IUPAC名不明）';
+    const canonical = props.CanonicalSMILES;
+    const key = iupac.replace(/[^A-Za-z0-9\-]/g, '').slice(0, 20).toUpperCase() || 'STRUCT';
+    const id = ++_pubchemCacheId;
+    _pubchemCache.set(id, {
+      key, label: `${key}|${iupac}`, displayName: iupac,
+      defaultClass: 'Homopolymer', source: 'pubchem', aliases: [],
+      elements: [{ name: `${iupac}（画像認識→PubChem取得）`, smiles: canonical, polyGroup: '',
+        note: '⚠ DECIMER + PubChem 由来の化合物 SMILES。高分子繰り返し単位として使う場合は [$] の追加が必要' }]
+    });
+    results.innerHTML = renderPubChemResultCard(id, key, iupac, canonical);
+  } catch(_) {
+    // PubChem lookup failed — still show SMILES from DECIMER
+    const id = ++_pubchemCacheId;
+    const key = 'DECIMER' + id;
+    _pubchemCache.set(id, {
+      key, label: `${key}|（構造認識結果）`, displayName: '（PubChem照合失敗）',
+      defaultClass: 'Homopolymer', source: 'pubchem', aliases: [],
+      elements: [{ name: '構造認識結果（要確認）', smiles, polyGroup: '',
+        note: '⚠ DECIMER 取得の SMILES。PubChem 照合失敗。正確性は要確認' }]
+    });
+    results.innerHTML = renderPubChemResultCard(id, 'DECIMER', 'PubChem 照合失敗（SMILES のみ）', smiles);
+  }
+}
+
+function renderPubChemResultCard(id, key, name, smiles) {
+  return `
+  <div class="psearch-card psearch-card-pubchem">
+    <div class="psearch-card-header">
+      <span class="psearch-key">${esc(key)}</span>
+      <span class="psearch-badge-pubchem">PubChem</span>
+      <span class="psearch-fullname">${esc(name)}</span>
+      <button class="psearch-add-btn psearch-add-btn-pubchem" onclick="addFromPubChem(${id})">+ 登録して追加</button>
+    </div>
+    <div class="psearch-elem-row">
+      <span class="psearch-elem-badge" style="background:#fef3c7;color:#92400e;border-color:#fde68a;">化合物 SMILES</span>
+      <span class="psearch-smiles" style="background:#fffbeb;color:#92400e;">${esc(smiles)}</span>
+    </div>
+    <div style="padding:4px 12px 7px;font-size:11px;color:var(--gray-400);">
+      ⚠ 化合物構造です。高分子繰り返し単位として使う場合は <code style="background:var(--gray-100);padding:1px 4px;border-radius:3px;">[$]</code> の追加が必要です。
+    </div>
+  </div>`;
 }
 
 function addComponentFromSearch(key) {
