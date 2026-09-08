@@ -12,7 +12,7 @@ const POLYMER_DB = [
     key: 'PPO', label: 'PPO|Poly(2,6-dimethyl-1,4-phenylene oxide)',
     displayName: 'poly(2,6-dimethyl-1,4-phenylene oxide)', defaultClass: 'Homopolymer',
     dropdownHidden: true,
-    aliases: ['Noryl', 'SA9000', 'SA120', 'Xyron', 'Iupiace', 'polyphenylene oxide', 'poly(phenylene oxide)'],
+    aliases: ['Noryl', 'SA120', 'Xyron', 'Iupiace', 'polyphenylene oxide', 'poly(phenylene oxide)'],
     elements: [{ name: '2,6-dimethyl-1,4-phenylene oxide unit', smiles: '[$]Oc1c(C)cc([$])cc1C', polyGroup: '', note: 'PPO = PPE（ポリフェニレンエーテル）と同一ポリマー。Noryl（SABIC）が代表品。ExcelドロップダウンではPPEとして登録されている場合あり' }]
   },
   {
