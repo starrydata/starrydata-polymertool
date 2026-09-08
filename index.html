@@ -1693,13 +1693,14 @@ function showStructureFromSmiles(smiles) {
   document.body.appendChild(overlay);
 
   ensureSmilesDrawer(() => {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
     try {
       const drawer = new SmilesDrawer.Drawer({ width: 440, height: 280, bondThickness: 1.4, fontSizeLarge: 7 });
       SmilesDrawer.parse(cleanSmiles,
-        tree => drawer.draw(tree, canvasId, 'light'),
+        tree => drawer.draw(tree, canvas, 'light'),
         err  => {
-          const c = document.getElementById(canvasId);
-          if (c) c.insertAdjacentHTML('afterend',
+          canvas.insertAdjacentHTML('afterend',
             `<div style="color:var(--red);font-size:12px;margin-top:8px;">⚠ 描画エラー: ${err}</div>`);
         }
       );
@@ -1804,13 +1805,14 @@ function showStructure(k) {
   document.body.appendChild(overlay);
 
   ensureSmilesDrawer(() => {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
     try {
       const drawer = new SmilesDrawer.Drawer({ width: 440, height: 280, bondThickness: 1.4, fontSizeLarge: 7 });
       SmilesDrawer.parse(cleanSmiles,
-        tree => drawer.draw(tree, canvasId, 'light'),
+        tree => drawer.draw(tree, canvas, 'light'),
         err  => {
-          const c = document.getElementById(canvasId);
-          if (c) c.insertAdjacentHTML('afterend',
+          canvas.insertAdjacentHTML('afterend',
             `<div style="color:var(--red);font-size:12px;margin-top:8px;">⚠ 描画エラー: ${err}<br>SMILES が正しいか確認してください。</div>`);
         }
       );
