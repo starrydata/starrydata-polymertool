@@ -1518,7 +1518,18 @@ async function runStructureRecognition(base64) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: [{ parts: [
           { inline_data: { mime_type: mime, data: b64 } },
-          { text: 'この化学構造式を SMILES 記法で表してください。SMILES のみを1行で出力してください。説明不要。' }
+          { text: `You are an expert chemist specializing in polymer chemistry. Convert the chemical structure shown in this image to a SMILES string.
+
+Rules:
+- Output only the SMILES string on a single line. No explanation, no markdown, no code block.
+- If the image shows a polymer repeat unit (indicated by brackets, subscript n, or wavy bonds), output the SMILES for one repeat unit only.
+- Pay careful attention to functional groups:
+  - Sulfone groups (-SO2-) must be written as S(=O)(=O), NOT as S alone
+  - Ether linkages (-O-) as O
+  - Amine as N, carbonyl as C=O, etc.
+- Aromatic rings: use lowercase letters (c1ccccc1 for benzene)
+- Leave open valences (chain ends / repeat unit attachment points) as-is without adding H or dummy atoms
+- If the structure is ambiguous, output your best interpretation` }
         ]}]})
       }
     );
