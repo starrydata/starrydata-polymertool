@@ -1272,10 +1272,23 @@ function addFromPubChem(id) {
   addComponentFromSearch(entry.key);
 }
 
+function looksLikeSmiles(s) {
+  if (s.length < 5) return false;
+  const special = (s.match(/[()\[\]=#+\-@\/\\cnosp]/g) || []).length;
+  return special >= 3 && !s.includes(' ');
+}
+
 async function polymerSearch(q) {
   const results = document.getElementById('psearch-results');
   q = (q || '').trim();
   if (!q) { results.innerHTML = ''; return; }
+
+  // SMILES を直接貼った場合は PubChem 構造検索にルーティング
+  if (looksLikeSmiles(q)) {
+    results.innerHTML = `<div class="psearch-loading">SMILES として PubChem を検索中…</div>`;
+    await searchBySMILES(q);
+    return;
+  }
 
   const seq = ++_searchSeq;
   const tokens = parsePolymerQuery(q);
@@ -1420,11 +1433,20 @@ async function runStructureRecognition(base64) {
 
   if (se()) { se().textContent = '✗ DECIMER 接続失敗'; se().style.color = 'var(--red)'; }
   document.getElementById('psearch-results').innerHTML = `
-    <div class="psearch-empty">
-      DECIMER への接続に失敗しました（サービス停止中またはネットワーク制限の可能性）。<br>
+    <div class="psearch-empty" style="text-align:left;padding:10px 4px;">
+      DECIMER への接続に失敗しました（ネットワーク制限の可能性）。<br>
       <a href="https://decimer.ai/" target="_blank" rel="noopener"
-        style="color:var(--blue-mid)">decimer.ai</a> で画像をアップロードして SMILES を取得し、
-      検索欄に貼り付けてください。
+        style="color:var(--blue-mid)">decimer.ai</a> で画像をアップロードして SMILES を取得後、下に貼り付けてください。
+      <div style="display:flex;gap:6px;margin-top:8px;">
+        <input type="text" id="smiles-paste-input"
+          placeholder="取得した SMILES を貼り付け…"
+          style="flex:1;height:30px;border:1px solid #bfdbfe;border-radius:4px;padding:0 8px;font-family:var(--mono);font-size:12px;min-width:0;"
+          onkeydown="if(event.key==='Enter')searchBySMILES(this.value.trim())">
+        <button onclick="searchBySMILES(document.getElementById('smiles-paste-input').value.trim())"
+          style="height:30px;padding:0 12px;background:var(--blue-mid);color:#fff;border:none;border-radius:4px;font-size:12px;font-family:var(--font);cursor:pointer;white-space:nowrap;">
+          SMILES 検索
+        </button>
+      </div>
     </div>`;
 }
 
