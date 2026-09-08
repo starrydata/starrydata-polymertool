@@ -1439,7 +1439,7 @@ function showImagePreview(src) {
   preview.style.display = 'flex';
   preview.innerHTML = `
     <img src="${src}" alt="構造式プレビュー">
-    <div id="decimer-status" class="psearch-loading">DECIMER に送信中…</div>`;
+    <div id="decimer-status" class="psearch-loading">接続中…</div>`;
   document.getElementById('psearch-results').innerHTML = '';
 }
 
@@ -1524,12 +1524,20 @@ async function runStructureRecognition(base64) {
     { label: 'Gradio3 kohulan-decimer',           fn: () => tryG3('kohulan-decimer.hf.space') },
   ];
 
+  const token = localStorage.getItem(_HF_TOKEN_KEY);
+  if (se()) {
+    se().textContent = token ? '① HF Inference API に送信中…' : '① HF トークン未設定 → スキップ';
+    se().style.color = 'var(--gray-400)';
+  }
+  await new Promise(r => setTimeout(r, 300));
+
   const errs = [];
-  for (const { label, fn } of labeled) {
-    if (se()) { se().textContent = `試行中: ${label}…`; se().style.color = 'var(--gray-400)'; }
+  for (let i = 0; i < labeled.length; i++) {
+    const { label, fn } = labeled[i];
+    if (se()) { se().textContent = `(${i+1}/${labeled.length}) ${label} …`; se().style.color = 'var(--gray-400)'; }
     try {
       const smiles = await fn();
-      if (se()) { se().textContent = `✓ 認識完了 [${label}] → ${smiles.length > 40 ? smiles.slice(0,40)+'…' : smiles}`; se().style.color = '#166534'; }
+      if (se()) { se().textContent = `✓ 認識完了 [${label}]`; se().style.color = '#166534'; }
       await searchBySMILES(smiles);
       return;
     } catch(e) { errs.push(`${label}: ${e.message}`); }
