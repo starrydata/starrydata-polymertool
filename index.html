@@ -617,6 +617,27 @@ pre.json-pre {
 }
 #psearch-img-preview img { max-height: 72px; max-width: 140px; border-radius: 4px; border: 1px solid #fde68a; object-fit: contain; }
 #decimer-status { font-size: 12px; color: var(--gray-400); flex: 1; }
+#hf-settings-bar {
+  display: none; align-items: center; gap: 8px;
+  padding: 7px 14px; background: #f0f9ff; border-bottom: 1px solid #bae6fd;
+  font-size: 12px;
+}
+#hf-settings-bar input {
+  flex: 1; height: 28px; padding: 0 8px; border: 1px solid #bae6fd;
+  border-radius: 4px; font-family: var(--mono); font-size: 12px; background: #fff; min-width: 0;
+}
+#hf-settings-bar input:focus { outline: none; border-color: #0284c7; }
+.hf-save-btn {
+  height: 28px; padding: 0 10px; background: #0284c7; color: #fff;
+  border: none; border-radius: 4px; font-size: 11px; font-family: var(--font); cursor: pointer; white-space: nowrap;
+}
+.hf-save-btn:hover { background: #0369a1; }
+.hf-clear-btn {
+  height: 28px; padding: 0 8px; background: #fff; color: var(--gray-600);
+  border: 1px solid var(--gray-200); border-radius: 4px; font-size: 11px; font-family: var(--font); cursor: pointer;
+}
+.hf-status-ok  { color: #166534; font-size: 11px; white-space: nowrap; }
+.hf-status-none { color: var(--gray-400); font-size: 11px; white-space: nowrap; }
 
 /* ─── PubChem search row ─── */
 .pubchem-row {
@@ -786,8 +807,16 @@ pre.json-pre {
         oninput="polymerSearch(this.value)"
         onkeydown="if(event.key==='Escape')clearPolymerSearch()">
       <button class="psearch-img-btn" onclick="document.getElementById('imgSearchInput').click()" title="構造式画像から検索（DECIMER）">🖼</button>
+      <button class="psearch-img-btn" onclick="toggleHFSettings()" title="HuggingFace API 設定" id="hf-gear-btn">⚙</button>
       <button class="psearch-clear" onclick="clearPolymerSearch()" title="クリア">✕</button>
       <input type="file" id="imgSearchInput" accept="image/*" style="display:none" onchange="handleImageFile(this.files[0])">
+    </div>
+    <div id="hf-settings-bar">
+      <span style="color:#0369a1;font-weight:700;white-space:nowrap;">HF Token</span>
+      <input type="password" id="hf-token-input" placeholder="hf_xxxxxxxxxxxx" autocomplete="off">
+      <button class="hf-save-btn" onclick="saveHFToken()">保存</button>
+      <button class="hf-clear-btn" onclick="clearHFToken()">削除</button>
+      <span id="hf-token-status"></span>
     </div>
     <div id="psearch-img-preview"></div>
     <div id="psearch-results"></div>
@@ -1346,6 +1375,44 @@ function clearPolymerSearch() {
 }
 
 // =============================================
+// HuggingFace トークン管理
+// =============================================
+const _HF_TOKEN_KEY = 'hf_inference_token';
+
+function toggleHFSettings() {
+  const bar = document.getElementById('hf-settings-bar');
+  const open = bar.style.display !== 'flex';
+  bar.style.display = open ? 'flex' : 'none';
+  if (open) {
+    const stored = localStorage.getItem(_HF_TOKEN_KEY) || '';
+    document.getElementById('hf-token-input').value = stored ? '（保存済）' : '';
+    updateHFStatus();
+  }
+}
+
+function saveHFToken() {
+  const val = document.getElementById('hf-token-input').value.trim();
+  if (!val || val === '（保存済）') return;
+  localStorage.setItem(_HF_TOKEN_KEY, val);
+  document.getElementById('hf-token-input').value = '（保存済）';
+  updateHFStatus();
+}
+
+function clearHFToken() {
+  localStorage.removeItem(_HF_TOKEN_KEY);
+  document.getElementById('hf-token-input').value = '';
+  updateHFStatus();
+}
+
+function updateHFStatus() {
+  const el = document.getElementById('hf-token-status');
+  if (!el) return;
+  const stored = localStorage.getItem(_HF_TOKEN_KEY);
+  el.className = stored ? 'hf-status-ok' : 'hf-status-none';
+  el.textContent  = stored ? '✓ 設定済' : '未設定';
+}
+
+// =============================================
 // 画像構造認識（DECIMER → PubChem）
 // =============================================
 function handleImageDrop(e) {
@@ -1414,7 +1481,28 @@ async function runStructureRecognition(base64) {
     return s.trim();
   }
 
+  // HuggingFace Inference API（api-inference.huggingface.co — hf.space とは別ドメイン）
+  async function tryHFInference() {
+    const token = localStorage.getItem(_HF_TOKEN_KEY);
+    if (!token) throw new Error('no token');
+    const byteStr = atob(base64.split(',')[1]);
+    const arr = new Uint8Array(byteStr.length);
+    for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
+    const blob = new Blob([arr], { type: mime });
+    const r = await fetch('https://api-inference.huggingface.co/models/Kohulan/DECIMER-Image_Transformer', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: blob
+    });
+    if (!r.ok) throw new Error(`HF ${r.status}`);
+    const data = await r.json();
+    const s = data?.[0]?.generated_text || data?.generated_text;
+    if (!s || !s.trim()) throw new Error('no SMILES');
+    return s.trim();
+  }
+
   const attempts = [
+    tryHFInference,
     () => tryG5('decimer-decimer.hf.space', 'predict'),
     () => tryG5('decimer-decimer.hf.space', 'process'),
     () => tryG5('kohulan-decimer.hf.space', 'predict'),
@@ -1630,6 +1718,7 @@ function clearAll() {
 // 初期表示
 loadCustomDB();
 addComponent();
+updateHFStatus();
 </script>
 </body>
 </html>
