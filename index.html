@@ -811,7 +811,9 @@ pre.json-pre {
       <input type="text" id="psearch-input" autocomplete="off"
         placeholder="略称・名称を入力、または構造式画像をドロップ"
         oninput="polymerSearch(this.value)"
-        onkeydown="if(event.key==='Escape')clearPolymerSearch()">
+        onkeydown="if(event.key==='Escape')clearPolymerSearch()"
+        ondragover="event.preventDefault()"
+        ondrop="handleImageDrop(event)">
       <button class="psearch-img-btn" onclick="document.getElementById('imgSearchInput').click()" title="構造式画像から検索（DECIMER）">🖼</button>
       <button class="psearch-img-btn" onclick="toggleHFSettings()" title="HuggingFace API 設定" id="hf-gear-btn">⚙</button>
       <button class="psearch-clear" onclick="clearPolymerSearch()" title="クリア">✕</button>
@@ -1846,6 +1848,14 @@ function clearAll() {
 loadCustomDB();
 addComponent();
 setTimeout(updateHFStatus, 0);
+
+// パネル外にファイルをドロップしてもブラウザが新しいタブで開かないようにする
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  const file = [...(e.dataTransfer?.files || [])].find(f => f.type.startsWith('image/'));
+  if (file) handleImageFile(file);
+});
 </script>
 </body>
 </html>
