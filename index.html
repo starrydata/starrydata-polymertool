@@ -1843,6 +1843,8 @@ function clearAll() {
 loadCustomDB();
 addComponent();
 setTimeout(updateHFStatus, 0);
+// ブラウザのフォーム履歴オートフィルを上書き
+setTimeout(() => { const el = document.getElementById('psearch-input'); if (el) el.value = ''; }, 0);
 
 // ドラッグ&ドロップ登録（HTML属性より確実）
 (function setupDrop() {
