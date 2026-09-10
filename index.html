@@ -803,18 +803,17 @@ pre.json-pre {
 
   <!-- ポリマー検索パネル -->
   <div class="psearch-panel" id="psearch-panel"
-    ondragover="event.preventDefault();event.stopPropagation();this.classList.add('drag-over')"
+    ondragover="event.preventDefault();event.dataTransfer.dropEffect='copy';this.classList.add('drag-over')"
     ondragleave="if(!this.contains(event.relatedTarget))this.classList.remove('drag-over')"
-    ondrop="event.preventDefault();event.stopPropagation();this.classList.remove('drag-over');handleImageDrop(event)">
+    ondrop="event.preventDefault();this.classList.remove('drag-over');handleImageDrop(event)">
     <div class="psearch-bar">
       <span class="psearch-label">🔍 ポリマー名検索</span>
-      <input type="text" id="psearch-input" autocomplete="off" readonly
+      <input type="text" id="psearch-input" autocomplete="off"
         placeholder="略称・名称を入力、または構造式画像をドロップ"
-        onfocus="this.removeAttribute('readonly')"
         oninput="polymerSearch(this.value)"
         onkeydown="if(event.key==='Escape')clearPolymerSearch()"
-        ondragover="event.preventDefault();event.stopPropagation()"
-        ondrop="event.preventDefault();event.stopPropagation();handleImageDrop(event)">
+        ondragover="event.preventDefault();event.dataTransfer.dropEffect='copy'"
+        ondrop="event.preventDefault();handleImageDrop(event)">
       <button class="psearch-img-btn" onclick="document.getElementById('imgSearchInput').click()" title="構造式画像から検索（DECIMER）">🖼</button>
       <button class="psearch-img-btn" onclick="toggleHFSettings()" title="HuggingFace API 設定" id="hf-gear-btn">⚙</button>
       <button class="psearch-clear" onclick="clearPolymerSearch()" title="クリア">✕</button>
@@ -1849,9 +1848,14 @@ function clearAll() {
 loadCustomDB();
 addComponent();
 setTimeout(updateHFStatus, 0);
+// ブラウザオートフィル対策（複数タイミングで上書き）
+[50, 200, 800].forEach(ms => setTimeout(() => {
+  const el = document.getElementById('psearch-input');
+  if (el && el.value) el.value = '';
+}, ms));
 
 // ページ全体でのドロップをキャッチ（パネル外に落としても動作、新タブ開きを防ぐ）
-window.addEventListener('dragover', e => e.preventDefault(), false);
+window.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }, false);
 window.addEventListener('drop', e => {
   e.preventDefault();
   const file = [...(e.dataTransfer?.files || [])].find(f => f.type.startsWith('image/'));
