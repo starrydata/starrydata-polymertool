@@ -803,17 +803,15 @@ pre.json-pre {
 
   <!-- ポリマー検索パネル -->
   <div class="psearch-panel" id="psearch-panel"
-    ondragover="event.preventDefault();event.dataTransfer.dropEffect='copy';this.classList.add('drag-over')"
-    ondragleave="if(!this.contains(event.relatedTarget))this.classList.remove('drag-over')"
-    ondrop="event.preventDefault();this.classList.remove('drag-over');handleImageDrop(event)">
+    ondragover="event.preventDefault();this.classList.add('drag-over')"
+    ondragleave="this.classList.remove('drag-over')"
+    ondrop="handleImageDrop(event)">
     <div class="psearch-bar">
       <span class="psearch-label">🔍 ポリマー名検索</span>
       <input type="text" id="psearch-input" autocomplete="off"
         placeholder="略称・名称を入力、または構造式画像をドロップ"
         oninput="polymerSearch(this.value)"
-        onkeydown="if(event.key==='Escape')clearPolymerSearch()"
-        ondragover="event.preventDefault();event.dataTransfer.dropEffect='copy'"
-        ondrop="event.preventDefault();handleImageDrop(event)">
+        onkeydown="if(event.key==='Escape')clearPolymerSearch()">
       <button class="psearch-img-btn" onclick="document.getElementById('imgSearchInput').click()" title="構造式画像から検索（DECIMER）">🖼</button>
       <button class="psearch-img-btn" onclick="toggleHFSettings()" title="HuggingFace API 設定" id="hf-gear-btn">⚙</button>
       <button class="psearch-clear" onclick="clearPolymerSearch()" title="クリア">✕</button>
