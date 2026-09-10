@@ -802,18 +802,13 @@ pre.json-pre {
   </div>
 
   <!-- ポリマー検索パネル -->
-  <div class="psearch-panel" id="psearch-panel"
-    ondragover="event.preventDefault();this.classList.add('drag-over')"
-    ondragleave="this.classList.remove('drag-over')"
-    ondrop="handleImageDrop(event)">
+  <div class="psearch-panel" id="psearch-panel">
     <div class="psearch-bar">
       <span class="psearch-label">🔍 ポリマー名検索</span>
       <input type="text" id="psearch-input" autocomplete="off"
         placeholder="略称・名称を入力、または構造式画像をドロップ"
         oninput="polymerSearch(this.value)"
-        onkeydown="if(event.key==='Escape')clearPolymerSearch()"
-        ondragover="event.preventDefault()"
-        ondrop="handleImageDrop(event)">
+        onkeydown="if(event.key==='Escape')clearPolymerSearch()">
       <button class="psearch-img-btn" onclick="document.getElementById('imgSearchInput').click()" title="構造式画像から検索（DECIMER）">🖼</button>
       <button class="psearch-img-btn" onclick="toggleHFSettings()" title="HuggingFace API 設定" id="hf-gear-btn">⚙</button>
       <button class="psearch-clear" onclick="clearPolymerSearch()" title="クリア">✕</button>
@@ -1849,13 +1844,39 @@ loadCustomDB();
 addComponent();
 setTimeout(updateHFStatus, 0);
 
-// パネル外にファイルをドロップしてもブラウザが新しいタブで開かないようにする
-document.addEventListener('dragover', e => e.preventDefault());
-document.addEventListener('drop', e => {
-  e.preventDefault();
-  const file = [...(e.dataTransfer?.files || [])].find(f => f.type.startsWith('image/'));
-  if (file) handleImageFile(file);
-});
+// ドラッグ&ドロップ登録（HTML属性より確実）
+(function setupDrop() {
+  const panel = document.getElementById('psearch-panel');
+
+  function onDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    panel.classList.add('drag-over');
+  }
+  function onDragLeave(e) {
+    if (!panel.contains(e.relatedTarget)) panel.classList.remove('drag-over');
+  }
+  function onDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    panel.classList.remove('drag-over');
+    const file = [...(e.dataTransfer?.files || [])].find(f => f.type.startsWith('image/'));
+    if (file) handleImageFile(file);
+  }
+
+  // パネル全体
+  panel.addEventListener('dragover',  onDragOver,  false);
+  panel.addEventListener('dragleave', onDragLeave, false);
+  panel.addEventListener('drop',      onDrop,      false);
+
+  // ページ全体（パネル外に落としても拾う＋ブラウザ既定の新タブ開きを防ぐ）
+  window.addEventListener('dragover', e => e.preventDefault(), false);
+  window.addEventListener('drop', e => {
+    e.preventDefault();
+    const file = [...(e.dataTransfer?.files || [])].find(f => f.type.startsWith('image/'));
+    if (file) handleImageFile(file);
+  }, false);
+})();
 </script>
 </body>
 </html>
