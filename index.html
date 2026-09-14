@@ -1372,9 +1372,19 @@ function openEntryEditor(p, mode) {
         <button onclick="this.closest('.struct-overlay').remove()"
           style="background:none;border:none;font-size:22px;cursor:pointer;line-height:1;color:var(--gray-400);">×</button>
       </div>
+      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:8px;margin-bottom:10px;">
+        <div style="font-size:11px;color:#0369a1;font-weight:600;margin-bottom:5px;">🔍 PubChem から追加</div>
+        <div style="display:flex;gap:6px;">
+          <input type="text" id="entry-editor-pc-input" placeholder="化合物名を入力（例: bisphenol A, DCDPS, MDA）"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();entryEditorPubChemSearch();}"
+            style="flex:1;font-size:12px;padding:5px 10px;border:1px solid #bae6fd;border-radius:4px;">
+          <button class="psearch-add-btn" style="background:#0284c7;border-color:#0284c7;" onclick="entryEditorPubChemSearch()">PubChem 検索</button>
+        </div>
+        <div id="entry-editor-pc-status" style="font-size:11px;color:var(--gray-400);margin-top:4px;min-height:14px;"></div>
+      </div>
       <div id="entry-editor-body"></div>
       <div style="display:flex;justify-content:space-between;margin-top:14px;gap:8px;">
-        <button class="psearch-add-btn" style="background:#6b7280;border-color:#6b7280;" onclick="entryEditorAdd()">＋ 行を追加</button>
+        <button class="psearch-add-btn" style="background:#6b7280;border-color:#6b7280;" onclick="entryEditorAdd()">＋ 空行を追加</button>
         <div style="display:flex;gap:6px;">
           <button class="psearch-add-btn" style="background:#0284c7;border-color:#0284c7;" onclick="entryEditorSaveLocal()">セッションに保存</button>
           <button class="psearch-add-btn" style="background:#16a34a;border-color:#16a34a;" onclick="entryEditorOpenIssue()">＋ DB 登録リクエスト</button>
@@ -1440,6 +1450,40 @@ function entryEditorRemove(i) {
   if (rows.length <= 1) return;
   rows.splice(i, 1);
   renderEntryEditorBody();
+}
+
+async function entryEditorPubChemSearch() {
+  const modal = window._activeEditorModal;
+  if (!modal) return;
+  const s = modal._state;
+  const input = modal.querySelector('#entry-editor-pc-input');
+  const status = modal.querySelector('#entry-editor-pc-status');
+  const name = (input?.value || '').trim();
+  if (!name) { status.textContent = '化合物名を入力してください'; status.style.color = 'var(--red)'; return; }
+  status.textContent = '検索中…';
+  status.style.color = 'var(--gray-400)';
+  try {
+    const res = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(name)}/property/CanonicalSMILES,IUPACName/JSON`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const props = data?.PropertyTable?.Properties?.[0];
+    if (!props?.CanonicalSMILES) throw new Error('SMILES 取得不可');
+    const smiles = props.CanonicalSMILES;
+    const iupac  = props.IUPACName || name;
+    const displayName = `${name} (${iupac})`;
+    if (s.mode === 'polymer') {
+      s.elements.push({ name: displayName, smiles, polyGroup: '', note: '⚠ PubChem 由来の化合物 SMILES。繰り返し単位として使うには [$] を追加してください' });
+    } else {
+      s.monomers.push({ name: displayName, smiles, role: '' });
+    }
+    status.textContent = `✓ 追加: ${iupac.slice(0, 60)}${iupac.length > 60 ? '…' : ''}`;
+    status.style.color = '#166534';
+    input.value = '';
+    renderEntryEditorBody();
+  } catch(e) {
+    status.textContent = `✗ ${name} — 見つかりませんでした (${e.message})`;
+    status.style.color = 'var(--red)';
+  }
 }
 
 function entryEditorShowStruct(i) {
