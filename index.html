@@ -1871,6 +1871,7 @@ Rules:
 async function searchBySMILES(smiles) {
   const results = document.getElementById('psearch-results');
   results.innerHTML = `<div class="psearch-loading">PubChem で化合物を照合中…</div>`;
+  let cardId, cardKey, cardName;
   try {
     const res = await fetch(
       `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/${encodeURIComponent(smiles)}/property/CanonicalSMILES,IUPACName/JSON`
@@ -1882,27 +1883,182 @@ async function searchBySMILES(smiles) {
 
     const iupac = props.IUPACName || '（IUPAC名不明）';
     const canonical = props.CanonicalSMILES;
-    const key = iupac.replace(/[^A-Za-z0-9\-]/g, '').slice(0, 20).toUpperCase() || 'STRUCT';
-    const id = ++_pubchemCacheId;
-    _pubchemCache.set(id, {
-      key, label: `${key}|${iupac}`, displayName: iupac,
+    cardKey = iupac.replace(/[^A-Za-z0-9\-]/g, '').slice(0, 20).toUpperCase() || 'STRUCT';
+    cardId = ++_pubchemCacheId;
+    cardName = iupac;
+    _pubchemCache.set(cardId, {
+      key: cardKey, label: `${cardKey}|${iupac}`, displayName: iupac,
       defaultClass: 'Homopolymer', source: 'pubchem', aliases: [],
       elements: [{ name: `${iupac}（画像認識→PubChem取得）`, smiles: canonical, polyGroup: '',
-        note: '⚠ DECIMER + PubChem 由来の化合物 SMILES。高分子繰り返し単位として使う場合は [$] の追加が必要' }]
+        note: '⚠ DECIMER + PubChem 由来の化合物 SMILES。高分子繰り返し単位として使う場合は [$] の追加が必要' }],
+      monomers: []
     });
-    results.innerHTML = renderPubChemResultCard(id, key, iupac, canonical);
+    results.innerHTML = renderPubChemResultCard(cardId, cardKey, iupac, canonical);
   } catch(_) {
-    // PubChem lookup failed — still show SMILES from DECIMER
-    const id = ++_pubchemCacheId;
-    const key = 'DECIMER' + id;
-    _pubchemCache.set(id, {
-      key, label: `${key}|（構造認識結果）`, displayName: '（PubChem照合失敗）',
+    cardId = ++_pubchemCacheId;
+    cardKey = 'DECIMER' + cardId;
+    cardName = 'PubChem 照合失敗（SMILES のみ）';
+    _pubchemCache.set(cardId, {
+      key: cardKey, label: `${cardKey}|（構造認識結果）`, displayName: '（PubChem照合失敗）',
       defaultClass: 'Homopolymer', source: 'pubchem', aliases: [],
       elements: [{ name: '構造認識結果（要確認）', smiles, polyGroup: '',
-        note: '⚠ DECIMER 取得の SMILES。PubChem 照合失敗。正確性は要確認' }]
+        note: '⚠ DECIMER 取得の SMILES。PubChem 照合失敗。正確性は要確認' }],
+      monomers: []
     });
-    results.innerHTML = renderPubChemResultCard(id, 'DECIMER', 'PubChem 照合失敗（SMILES のみ）', smiles);
+    results.innerHTML = renderPubChemResultCard(cardId, cardKey, cardName, smiles);
   }
+  // ここで Gemini に「このポリマー SMILES を構成するモノマー」を推定させる
+  deduceMonomersFromSmiles(smiles, cardId).catch(e => console.warn('deduceMonomers:', e));
+}
+
+async function deduceMonomersFromSmiles(smiles, cardId) {
+  const key = localStorage.getItem(_GEMINI_KEY_KEY);
+  if (!key) {
+    updateMonomerSection(cardId, null, 'Gemini API Key 未設定のためモノマー推定はスキップされました');
+    return;
+  }
+  updateMonomerSection(cardId, null, 'Gemini でモノマー逆推定中…');
+  try {
+    const prompt = `You are an expert polymer chemist. Given the SMILES of a polymer repeat unit or a compound derived from polymerization, identify the ORIGINAL monomer(s) that would produce it via a standard synthesis route.
+
+Polymer/compound SMILES:
+${smiles}
+
+Rules:
+- Respond with ONLY a JSON array. No markdown, no explanation, no code block.
+- Each element: {"name": "common name", "smiles": "compound SMILES with no [$]", "role": "brief role e.g. bisphenol, diamine, dianhydride, vinyl monomer, diol, diisocyanate"}
+- Include all distinct monomers needed for the synthesis (typically 1-3 monomers).
+- Use canonical, small-molecule SMILES (no polymer notation).
+- If uncertain, provide your best inference — do not return an empty array.
+
+Example output: [{"name":"bisphenol A","smiles":"Oc1ccc(C(C)(C)c2ccc(O)cc2)cc1","role":"bisphenol"},{"name":"4,4'-dichlorodiphenyl sulfone","smiles":"Clc1ccc(S(=O)(=O)c2ccc(Cl)cc2)cc1","role":"diaryl halide"}]`;
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models/gemini-3.6-flash:generateContent?key=${key}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }]}]})
+      }
+    );
+    if (!res.ok) throw new Error(`Gemini ${res.status}`);
+    const data = await res.json();
+    const text = (data?.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+    if (!text) throw new Error('empty response');
+    const jsonText = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
+    let monomers;
+    try { monomers = JSON.parse(jsonText); }
+    catch(_) {
+      const m = jsonText.match(/\[[\s\S]*\]/);
+      if (!m) throw new Error('JSON not found');
+      monomers = JSON.parse(m[0]);
+    }
+    if (!Array.isArray(monomers) || !monomers.length) throw new Error('empty monomers');
+    monomers = monomers.filter(m => m && typeof m === 'object' && m.smiles);
+    updateMonomerSection(cardId, monomers, null);
+  } catch(e) {
+    updateMonomerSection(cardId, null, `モノマー推定失敗: ${e.message}`);
+  }
+}
+
+function updateMonomerSection(cardId, monomers, statusMessage) {
+  const entry = _pubchemCache.get(cardId);
+  if (!entry) return;
+  if (monomers) entry.monomers = monomers;
+  entry._monomerStatus = statusMessage;
+  const section = document.getElementById(`psearch-monomers-${cardId}`);
+  if (section) section.outerHTML = renderMonomerSection(cardId);
+}
+
+function renderMonomerSection(id) {
+  const entry = _pubchemCache.get(id);
+  if (!entry) return '';
+  const monomers = entry.monomers || [];
+  const status = entry._monomerStatus;
+  const rows = monomers.map((m, i) => `
+    <div class="psearch-elem-row" style="align-items:flex-start;flex-direction:column;gap:4px;padding:8px 12px;border-top:1px solid #bae6fd;">
+      <div style="display:flex;gap:6px;align-items:center;width:100%;">
+        <span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">モノマー ${i + 1}</span>
+        <input type="text" placeholder="モノマー名" value="${esc(m.name || '')}"
+          oninput="updateMonomerField(${id}, ${i}, 'name', this.value)"
+          style="flex:1;font-size:12px;padding:3px 8px;border:1px solid #bae6fd;border-radius:4px;background:white;">
+        <input type="text" placeholder="role" value="${esc(m.role || '')}"
+          oninput="updateMonomerField(${id}, ${i}, 'role', this.value)"
+          style="width:130px;font-size:12px;padding:3px 8px;border:1px solid #bae6fd;border-radius:4px;background:white;">
+        <button class="psearch-add-btn" style="background:#0284c7;border-color:#0284c7;font-size:11px;padding:3px 8px;" onclick="showStructureFromMonomer(${id}, ${i})">構造</button>
+        <button class="psearch-add-btn" style="background:#16a34a;border-color:#16a34a;font-size:11px;padding:3px 8px;" onclick="registerMonomerFromCard(${id}, ${i})">＋ DB 登録</button>
+        <button class="psearch-add-btn" style="background:#dc2626;border-color:#dc2626;font-size:11px;padding:3px 8px;" onclick="removeMonomerRow(${id}, ${i})">×</button>
+      </div>
+      <textarea
+        oninput="updateMonomerField(${id}, ${i}, 'smiles', this.value)"
+        style="width:100%;background:#f0f9ff;color:#0c4a6e;font-family:var(--mono);font-size:12px;border:1px solid #bae6fd;border-radius:6px;padding:6px 10px;resize:vertical;min-height:38px;line-height:1.4;">${esc(m.smiles || '')}</textarea>
+    </div>`).join('');
+  const statusHtml = status ? `<div style="padding:6px 12px;font-size:11px;color:${status.includes('失敗') || status.includes('未設定') ? '#dc2626' : 'var(--gray-500)'};">${esc(status)}</div>` : '';
+  return `
+    <div id="psearch-monomers-${id}" style="background:#f0f9ff;border-top:2px solid #bae6fd;">
+      <div style="padding:8px 12px;font-size:12px;color:#0369a1;font-weight:600;display:flex;justify-content:space-between;align-items:center;">
+        <span>🧪 構成モノマー（Gemini 逆推定）</span>
+        <button class="psearch-add-btn" style="background:#0284c7;border-color:#0284c7;font-size:11px;padding:3px 10px;" onclick="addMonomerRow(${id})">＋ モノマー行を追加</button>
+      </div>
+      ${rows || '<div style="padding:8px 12px;color:var(--gray-400);font-size:12px;">モノマーがまだありません。</div>'}
+      ${statusHtml}
+    </div>`;
+}
+
+function updateMonomerField(id, i, field, value) {
+  const entry = _pubchemCache.get(id);
+  if (!entry || !entry.monomers[i]) return;
+  entry.monomers[i][field] = value;
+}
+
+function addMonomerRow(id) {
+  const entry = _pubchemCache.get(id);
+  if (!entry) return;
+  entry.monomers = entry.monomers || [];
+  entry.monomers.push({ name: '', smiles: '', role: '' });
+  const section = document.getElementById(`psearch-monomers-${id}`);
+  if (section) section.outerHTML = renderMonomerSection(id);
+}
+
+function removeMonomerRow(id, i) {
+  const entry = _pubchemCache.get(id);
+  if (!entry || !entry.monomers[i]) return;
+  entry.monomers.splice(i, 1);
+  const section = document.getElementById(`psearch-monomers-${id}`);
+  if (section) section.outerHTML = renderMonomerSection(id);
+}
+
+function showStructureFromMonomer(id, i) {
+  const entry = _pubchemCache.get(id);
+  if (!entry || !entry.monomers[i]) return;
+  const smi = (entry.monomers[i].smiles || '').trim();
+  if (!smi) { alert('SMILES が空です'); return; }
+  showStructureFromSmiles(smi);
+}
+
+function registerMonomerFromCard(id, i) {
+  const entry = _pubchemCache.get(id);
+  if (!entry || !entry.monomers[i]) return;
+  const m = entry.monomers[i];
+  const smi = (m.smiles || '').trim();
+  if (!smi) { alert('SMILES が空です'); return; }
+  const suggested = prompt(
+    'モノマー登録用の key（一意）を入力してください:\n例: BPA, DCDPS, ODA',
+    (m.name || '').split(/[\s(]/)[0].replace(/[^A-Za-z0-9\-]/g, '').toUpperCase().slice(0, 20)
+  );
+  if (!suggested) return;
+  const elementsJson = JSON.stringify([{
+    name: m.name || `${suggested} monomer`,
+    smiles: smi, polyGroup: m.role || '',
+    note: '画像認識→Gemini モノマー逆推定由来の化合物 SMILES'
+  }], null, 2);
+  openIssueForm({
+    key: suggested,
+    label: `${suggested}|${m.name || suggested}`,
+    displayName: m.name || '',
+    defaultClass: 'Homopolymer',
+    elements: elementsJson
+  });
 }
 
 function renderPubChemResultCard(id, key, name, smiles) {
@@ -1922,6 +2078,7 @@ function renderPubChemResultCard(id, key, name, smiles) {
       <button class="psearch-add-btn" style="background:#6b7280;border-color:#6b7280;font-size:11px;padding:4px 10px;" onclick="addElementRow(${id})">＋ 部品行を追加</button>
       <span style="font-size:11px;color:var(--gray-400);">⚠ [$] を結合点に追加してから DB 登録してください</span>
     </div>
+    ${renderMonomerSection(id)}
   </div>`;
 }
 
