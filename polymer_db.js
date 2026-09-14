@@ -32,6 +32,13 @@ const POLYMER_DB = [
         "polyGroup": "",
         "note": ""
       }
+    ],
+    "monomers": [
+      {
+        "name": "2,6-dimethylphenol (2,6-xylenol)",
+        "smiles": "Cc1cccc(C)c1O",
+        "role": "phenol"
+      }
     ]
   },
   {
@@ -54,6 +61,13 @@ const POLYMER_DB = [
         "smiles": "[$]Oc1c(C)cc([$])cc1C",
         "polyGroup": "",
         "note": "PPO = PPE（ポリフェニレンエーテル）と同一ポリマー。Noryl（SABIC）が代表品。ExcelドロップダウンではPPEとして登録されている場合あり"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "2,6-dimethylphenol (2,6-xylenol)",
+        "smiles": "Cc1cccc(C)c1O",
+        "role": "phenol"
       }
     ]
   },
@@ -78,6 +92,18 @@ const POLYMER_DB = [
         "polyGroup": "",
         "note": "para位でS橋絡した芳香族スルフィド。メチル基なし。Ryton（Solvay）が代表品"
       }
+    ],
+    "monomers": [
+      {
+        "name": "1,4-dichlorobenzene",
+        "smiles": "Clc1ccc(Cl)cc1",
+        "role": "diaryl halide"
+      },
+      {
+        "name": "sodium sulfide (Na2S)",
+        "smiles": "[Na+].[Na+].[S-2]",
+        "role": "sulfide source"
+      }
     ]
   },
   {
@@ -94,7 +120,8 @@ const POLYMER_DB = [
         "polyGroup": "",
         "note": "PPOのO→S置換体。2,6-ジメチルフェニレンスルフィド。アモルファス化により低Df・高周波特性に優れる"
       }
-    ]
+    ],
+    "monomers": []
   },
   {
     "key": "PMPS-PPO",
@@ -119,6 +146,18 @@ const POLYMER_DB = [
         "polyGroup": "",
         "note": "PMPS（スルフィド）単位。O→S置換により分極率を低下させ周波数非依存の低Dfを実現"
       }
+    ],
+    "monomers": [
+      {
+        "name": "2,6-dimethylphenol",
+        "smiles": "Cc1cccc(C)c1O",
+        "role": "phenol"
+      },
+      {
+        "name": "2,6-dimethylthiophenol",
+        "smiles": "Cc1cccc(C)c1S",
+        "role": "thiophenol"
+      }
     ]
   },
   {
@@ -141,6 +180,18 @@ const POLYMER_DB = [
         "smiles": "O=C1C=CC(=O)N1c1ccc(Cc2ccc(N3C(=O)C=CC3=O)cc2)cc1",
         "polyGroup": "maleimide",
         "note": "⚠ 反応前モノマー構造。反応後はマレイミド二重結合が開環した構造に修正してください"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "4,4'-methylenedianiline (MDA)",
+        "smiles": "Nc1ccc(Cc2ccc(N)cc2)cc1",
+        "role": "diamine"
+      },
+      {
+        "name": "maleic anhydride",
+        "smiles": "O=C1OC(=O)C=C1",
+        "role": "anhydride"
       }
     ]
   },
@@ -170,6 +221,18 @@ const POLYMER_DB = [
         "polyGroup": "cyanate ester",
         "note": "⚠ 反応前モノマー構造。反応後はシアネート基3つが三量体化してトリアジン環を形成"
       }
+    ],
+    "monomers": [
+      {
+        "name": "bisphenol A",
+        "smiles": "Oc1ccc(C(C)(C)c2ccc(O)cc2)cc1",
+        "role": "bisphenol"
+      },
+      {
+        "name": "cyanogen bromide (BrCN)",
+        "smiles": "BrC#N",
+        "role": "cyanation agent"
+      }
     ]
   },
   {
@@ -191,6 +254,18 @@ const POLYMER_DB = [
         "smiles": "C=CCOc1ccc(C(C)(C)c2ccc(OCC=C)cc2)cc1",
         "polyGroup": "allyl ether",
         "note": "⚠ 反応前モノマー構造。CE・BMI 系の反応性共モノマー。2つのアリルエーテル基がBMIのマレイミドとen反応し架橋網目に取り込まれる"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "bisphenol A",
+        "smiles": "Oc1ccc(C(C)(C)c2ccc(O)cc2)cc1",
+        "role": "bisphenol"
+      },
+      {
+        "name": "allyl bromide",
+        "smiles": "C=CCBr",
+        "role": "alkyl halide"
       }
     ]
   },
@@ -214,6 +289,18 @@ const POLYMER_DB = [
         "smiles": "[$]CC(O)COc1ccc(C(C)(C)c2ccc(O[$])cc2)cc1",
         "polyGroup": "",
         "note": "高分子量BPAエポキシ（フェノキシ樹脂）の繰り返し単位。エポキシ環が開環した構造"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "bisphenol A",
+        "smiles": "Oc1ccc(C(C)(C)c2ccc(O)cc2)cc1",
+        "role": "bisphenol"
+      },
+      {
+        "name": "epichlorohydrin",
+        "smiles": "ClCC1CO1",
+        "role": "epoxide"
       }
     ]
   },
@@ -239,6 +326,18 @@ const POLYMER_DB = [
         "smiles": "C1OC1COc1ccc(C(C)(C)c2ccc(OCC3CO3)cc2)cc1",
         "polyGroup": "epoxy",
         "note": "⚠ 反応前モノマー構造（DGEBA）。硬化剤の種類・配合によって反応後の構造が変わる"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "bisphenol A",
+        "smiles": "Oc1ccc(C(C)(C)c2ccc(O)cc2)cc1",
+        "role": "bisphenol"
+      },
+      {
+        "name": "epichlorohydrin",
+        "smiles": "ClCC1CO1",
+        "role": "epoxide"
       }
     ]
   },
@@ -271,6 +370,18 @@ const POLYMER_DB = [
         "polyGroup": "",
         "note": "二無水物（PMDA）のジイミド部分。[$] = ODA側のアリール炭素との結合点。⚠ 要確認"
       }
+    ],
+    "monomers": [
+      {
+        "name": "4,4'-oxydianiline (ODA)",
+        "smiles": "Nc1ccc(Oc2ccc(N)cc2)cc1",
+        "role": "diamine"
+      },
+      {
+        "name": "pyromellitic dianhydride (PMDA)",
+        "smiles": "O=C1OC(=O)c2cc3C(=O)OC(=O)c3cc12",
+        "role": "dianhydride"
+      }
     ]
   },
   {
@@ -297,6 +408,18 @@ const POLYMER_DB = [
         "polyGroup": "",
         "note": "無水マレイン酸の繰り返し単位（環は保持）"
       }
+    ],
+    "monomers": [
+      {
+        "name": "styrene",
+        "smiles": "C=Cc1ccccc1",
+        "role": "vinyl monomer"
+      },
+      {
+        "name": "maleic anhydride",
+        "smiles": "O=C1OC(=O)C=C1",
+        "role": "anhydride comonomer"
+      }
     ]
   },
   {
@@ -321,6 +444,13 @@ const POLYMER_DB = [
         "polyGroup": "",
         "note": "cis/trans混合を想定。純cis: [$]C/C=C\\C[$]、純trans: [$]C/C=C/C[$]"
       }
+    ],
+    "monomers": [
+      {
+        "name": "1,3-butadiene",
+        "smiles": "C=CC=C",
+        "role": "diene"
+      }
     ]
   },
   {
@@ -341,6 +471,13 @@ const POLYMER_DB = [
         "polyGroup": "",
         "note": ""
       }
+    ],
+    "monomers": [
+      {
+        "name": "styrene",
+        "smiles": "C=Cc1ccccc1",
+        "role": "vinyl monomer"
+      }
     ]
   },
   {
@@ -359,6 +496,18 @@ const POLYMER_DB = [
         "smiles": "FC(F)=C(F)Oc1ccc(-c2ccc(OC(F)=C(F)F)cc2)cc1",
         "polyGroup": "trifluorovinyl ether",
         "note": "⚠ 反応前モノマー構造。反応後はパーフルオロシクロブタン環([2+2]付加)を形成"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "4,4'-biphenol",
+        "smiles": "Oc1ccc(-c2ccc(O)cc2)cc1",
+        "role": "biphenol"
+      },
+      {
+        "name": "bromotrifluoroethylene (BTFE)",
+        "smiles": "FC(F)=C(F)Br",
+        "role": "trifluorovinyl source"
       }
     ]
   },
@@ -384,6 +533,13 @@ const POLYMER_DB = [
         "polyGroup": "",
         "note": "⚠ PMMaを例示。アクリル系は種類が多い(PGMA等)。実際の化学構造を確認して修正してください"
       }
+    ],
+    "monomers": [
+      {
+        "name": "methyl methacrylate (MMA)",
+        "smiles": "C=C(C)C(=O)OC",
+        "role": "vinyl monomer"
+      }
     ]
   },
   {
@@ -403,6 +559,23 @@ const POLYMER_DB = [
         "smiles": "",
         "polyGroup": "benzoxazine",
         "note": "⚠ 開環重合後の構造はモノマー(フェノール・アミン・ホルムアルデヒドの組み合わせ)によって異なる"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "bisphenol A",
+        "smiles": "Oc1ccc(C(C)(C)c2ccc(O)cc2)cc1",
+        "role": "phenol"
+      },
+      {
+        "name": "aniline",
+        "smiles": "Nc1ccccc1",
+        "role": "primary amine"
+      },
+      {
+        "name": "formaldehyde",
+        "smiles": "C=O",
+        "role": "aldehyde"
       }
     ]
   },
@@ -434,6 +607,18 @@ const POLYMER_DB = [
         "polyGroup": "",
         "note": "EPR(エチレン-プロピレンゴム)の例。比率は論文記載値で入力"
       }
+    ],
+    "monomers": [
+      {
+        "name": "ethylene",
+        "smiles": "C=C",
+        "role": "olefin"
+      },
+      {
+        "name": "propylene",
+        "smiles": "C=CC",
+        "role": "olefin"
+      }
     ]
   },
   {
@@ -452,6 +637,18 @@ const POLYMER_DB = [
         "smiles": "[$]c1ccc2nc3ccc([$])cc3oc2c1",
         "polyGroup": "",
         "note": "⚠ 繰り返し単位(要確認)"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "4,6-diaminoresorcinol (DAR)",
+        "smiles": "Nc1cc(N)c(O)cc1O",
+        "role": "diaminodiol"
+      },
+      {
+        "name": "terephthalic acid",
+        "smiles": "OC(=O)c1ccc(C(=O)O)cc1",
+        "role": "diacid"
       }
     ]
   },
@@ -483,6 +680,18 @@ const POLYMER_DB = [
         "polyGroup": "",
         "note": "ジイソシアネート(MDI)のウレタン部分。[$] = ジオール側OとのO-CO-N結合点。⚠ 要確認"
       }
+    ],
+    "monomers": [
+      {
+        "name": "1,4-butanediol (BDO)",
+        "smiles": "OCCCCO",
+        "role": "diol"
+      },
+      {
+        "name": "MDI (4,4'-methylenediphenyl diisocyanate)",
+        "smiles": "O=C=Nc1ccc(Cc2ccc(N=C=O)cc2)cc1",
+        "role": "diisocyanate"
+      }
     ]
   },
   {
@@ -510,6 +719,13 @@ const POLYMER_DB = [
         "smiles": "[$]CC[$]",
         "polyGroup": "",
         "note": "PEを例示。PP: [$]CC(C)[$]、LLDPE等は種類によって修正してください"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "ethylene",
+        "smiles": "C=C",
+        "role": "olefin"
       }
     ]
   },
@@ -539,6 +755,13 @@ const POLYMER_DB = [
         "smiles": "[$]C(F)(F)C(F)(F)[$]",
         "polyGroup": "",
         "note": "PTFEを例示。FEP・PVDF等は種類によって修正してください"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "tetrafluoroethylene (TFE)",
+        "smiles": "FC(F)=C(F)F",
+        "role": "fluoroolefin"
       }
     ]
   },
@@ -571,6 +794,18 @@ const POLYMER_DB = [
         "polyGroup": "",
         "note": "⚠ Xydarなど他のLCPは構造が大きく異なる。具体的な化学構造を確認して修正してください"
       }
+    ],
+    "monomers": [
+      {
+        "name": "p-hydroxybenzoic acid (HBA)",
+        "smiles": "OC(=O)c1ccc(O)cc1",
+        "role": "hydroxyacid"
+      },
+      {
+        "name": "6-hydroxy-2-naphthoic acid (HNA)",
+        "smiles": "OC(=O)c1ccc2cc(O)ccc2c1",
+        "role": "hydroxyacid"
+      }
     ]
   },
   {
@@ -594,6 +829,18 @@ const POLYMER_DB = [
         "smiles": "[$]Oc1ccc(S(=O)(=O)c2ccc([$])cc2)cc1",
         "polyGroup": "",
         "note": "フェニレンエーテル＋スルホン繰り返し単位。Ultrason E・Victrex ES 型。ビスフェノールAなし"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "4,4'-dihydroxydiphenyl sulfone (bisphenol S)",
+        "smiles": "Oc1ccc(S(=O)(=O)c2ccc(O)cc2)cc1",
+        "role": "bisphenol"
+      },
+      {
+        "name": "4,4'-dichlorodiphenyl sulfone (DCDPS)",
+        "smiles": "Clc1ccc(S(=O)(=O)c2ccc(Cl)cc2)cc1",
+        "role": "diaryl halide"
       }
     ]
   },
@@ -627,6 +874,18 @@ const POLYMER_DB = [
         "polyGroup": "",
         "note": "DFDPS のF脱離後のジフェニルスルホンユニット。[$] = BHF 側のO-エーテル結合点"
       }
+    ],
+    "monomers": [
+      {
+        "name": "9,9-bis(4-hydroxyphenyl)fluorene (BHF)",
+        "smiles": "Oc1ccc(C2(c3ccc(O)cc3)c3ccccc3-c3ccccc32)cc1",
+        "role": "bisphenol"
+      },
+      {
+        "name": "4,4'-difluorodiphenyl sulfone (DFDPS)",
+        "smiles": "Fc1ccc(S(=O)(=O)c2ccc(F)cc2)cc1",
+        "role": "diaryl halide"
+      }
     ]
   },
   {
@@ -648,6 +907,18 @@ const POLYMER_DB = [
         "smiles": "[$]Oc1ccc(C(C)(C)c2ccc(Oc3ccc(S(=O)(=O)c4ccc([$])cc4)cc3)cc2)cc1",
         "polyGroup": "",
         "note": "ビスフェノールA型ポリスルホン(Udel P-1700型)。PESU(Ultrason E型)とは構造が異なる"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "bisphenol A",
+        "smiles": "Oc1ccc(C(C)(C)c2ccc(O)cc2)cc1",
+        "role": "bisphenol"
+      },
+      {
+        "name": "4,4'-dichlorodiphenyl sulfone (DCDPS)",
+        "smiles": "Clc1ccc(S(=O)(=O)c2ccc(Cl)cc2)cc1",
+        "role": "diaryl halide"
       }
     ]
   },

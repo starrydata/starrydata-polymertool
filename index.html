@@ -1259,13 +1259,37 @@ function renderResultCard(p, tok) {
     : '';
   const customBadge = p.source === 'pubchem'
     ? `<span class="psearch-badge-custom">カスタム登録済</span>` : '';
+  const keyEsc = esc(p.key);
+  const monomers = p.monomers || [];
+  const monomersHtml = monomers.length
+    ? `<div style="padding:6px 12px 8px;border-top:1px dashed var(--gray-200);background:#f8fafc;">
+         <div style="font-size:11px;color:var(--gray-500);margin-bottom:4px;font-weight:600;">
+           🧪 構成モノマー
+           <button class="psearch-add-btn" style="background:#6b7280;border-color:#6b7280;font-size:10.5px;padding:2px 8px;margin-left:6px;" onclick="editMonomers('${keyEsc}')">編集</button>
+         </div>
+         ${monomers.map((m, i) => `
+           <div style="display:flex;align-items:center;gap:6px;padding:2px 0;font-size:12px;">
+             <span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:3px;font-size:10.5px;">${esc(m.role || 'monomer')}</span>
+             <span style="min-width:180px;color:var(--gray-700);">${esc(m.name || '')}</span>
+             <span style="flex:1;font-family:var(--mono);font-size:11px;color:var(--gray-600);word-break:break-all;">${esc(m.smiles || '')}</span>
+             <button class="psearch-add-btn" style="background:#0284c7;border-color:#0284c7;font-size:10.5px;padding:2px 8px;" onclick="showStructureFromSmiles('${(m.smiles || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">構造</button>
+             <button class="psearch-add-btn" style="background:#16a34a;border-color:#16a34a;font-size:10.5px;padding:2px 8px;" onclick="registerMonomerToDB('${keyEsc}', ${i})">＋ DB 登録</button>
+           </div>
+         `).join('')}
+       </div>`
+    : `<div style="padding:6px 12px;font-size:11px;color:var(--gray-400);border-top:1px dashed var(--gray-200);">
+         🧪 構成モノマー未登録
+         <button class="psearch-add-btn" style="background:#6b7280;border-color:#6b7280;font-size:10.5px;padding:2px 8px;margin-left:6px;" onclick="editMonomers('${keyEsc}')">追加</button>
+       </div>`;
   return `
-  <div class="psearch-card">
+  <div class="psearch-card" data-polymer-key="${keyEsc}">
     <div class="psearch-card-header">
-      <span class="psearch-key">${esc(p.key)}</span>
+      <span class="psearch-key">${keyEsc}</span>
       ${customBadge}
       <span class="psearch-fullname">${esc(p.displayName || p.label)}</span>
-      <button class="psearch-add-btn" onclick="addComponentFromSearch('${esc(p.key)}')">+ component に追加</button>
+      <button class="psearch-add-btn" style="background:#0284c7;border-color:#0284c7;margin-right:4px;" onclick="editPolymerEntry('${keyEsc}')">ポリマー編集</button>
+      <button class="psearch-add-btn" style="background:#16a34a;border-color:#16a34a;margin-right:4px;" onclick="registerPolymerToDB('${keyEsc}')">＋ DB 登録</button>
+      <button class="psearch-add-btn" onclick="addComponentFromSearch('${keyEsc}')">+ component に追加</button>
     </div>
     ${aliasHtml}
     ${p.elements.map((el, i) => `
@@ -1275,7 +1299,182 @@ function renderResultCard(p, tok) {
         <span class="psearch-smiles">${esc(el.smiles || '（SMILES未設定）')}</span>
       </div>
     `).join('')}
+    ${monomersHtml}
   </div>`;
+}
+
+function findPolymerByKey(key) {
+  return POLYMER_DB.find(p => p.key === key);
+}
+
+function registerPolymerToDB(key) {
+  const p = findPolymerByKey(key);
+  if (!p) return;
+  openIssueForm({
+    key: p.key,
+    label: p.label || `${p.key}|${p.displayName || ''}`,
+    displayName: p.displayName || '',
+    defaultClass: p.defaultClass || 'Homopolymer',
+    elements: JSON.stringify(p.elements || [], null, 2)
+  });
+}
+
+function registerMonomerToDB(polymerKey, monomerIdx) {
+  const p = findPolymerByKey(polymerKey);
+  if (!p || !p.monomers || !p.monomers[monomerIdx]) return;
+  const m = p.monomers[monomerIdx];
+  const suggested = prompt(
+    `モノマー登録用の key（一意）を入力してください:\n例: BPA, DCDPS, ODA`,
+    (m.name || '').split(/[\s(]/)[0].replace(/[^A-Za-z0-9\-]/g, '').toUpperCase().slice(0, 20)
+  );
+  if (!suggested) return;
+  const elementsJson = JSON.stringify([{
+    name: m.name || `${suggested} monomer`,
+    smiles: m.smiles || '',
+    polyGroup: m.role || '',
+    note: `${p.key} の構成モノマー。化合物 SMILES（[$] なし）`
+  }], null, 2);
+  openIssueForm({
+    key: suggested,
+    label: `${suggested}|${m.name || suggested}`,
+    displayName: m.name || '',
+    defaultClass: 'Homopolymer',
+    elements: elementsJson
+  });
+}
+
+function editPolymerEntry(key) {
+  const p = findPolymerByKey(key);
+  if (!p) return;
+  openEntryEditor(p, 'polymer');
+}
+
+function editMonomers(key) {
+  const p = findPolymerByKey(key);
+  if (!p) return;
+  openEntryEditor(p, 'monomers');
+}
+
+function openEntryEditor(p, mode) {
+  const modal = document.createElement('div');
+  modal.className = 'struct-overlay';
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+
+  const state = { p, mode, monomers: (p.monomers || []).map(m => ({ ...m })), elements: p.elements.map(e => ({ ...e })) };
+  modal._state = state;
+
+  modal.innerHTML = `
+    <div class="struct-modal" style="max-width:720px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span style="font-weight:700;font-size:14px;">
+          ${mode === 'polymer' ? 'ポリマー編集' : '構成モノマー編集'}: ${esc(p.key)}
+        </span>
+        <button onclick="this.closest('.struct-overlay').remove()"
+          style="background:none;border:none;font-size:22px;cursor:pointer;line-height:1;color:var(--gray-400);">×</button>
+      </div>
+      <div id="entry-editor-body"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:14px;gap:8px;">
+        <button class="psearch-add-btn" style="background:#6b7280;border-color:#6b7280;" onclick="entryEditorAdd()">＋ 行を追加</button>
+        <div style="display:flex;gap:6px;">
+          <button class="psearch-add-btn" style="background:#0284c7;border-color:#0284c7;" onclick="entryEditorSaveLocal()">セッションに保存</button>
+          <button class="psearch-add-btn" style="background:#16a34a;border-color:#16a34a;" onclick="entryEditorOpenIssue()">＋ DB 登録リクエスト</button>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:6px;">
+        「セッションに保存」= このブラウザでのみ即時反映 / 「DB 登録リクエスト」= Issue Form を開いて永続反映
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  window._activeEditorModal = modal;
+  renderEntryEditorBody();
+}
+
+function renderEntryEditorBody() {
+  const modal = window._activeEditorModal;
+  if (!modal) return;
+  const s = modal._state;
+  const body = modal.querySelector('#entry-editor-body');
+  const rows = s.mode === 'polymer' ? s.elements : s.monomers;
+  const rowLabel = s.mode === 'polymer' ? 'element' : 'monomer';
+  body.innerHTML = rows.map((r, i) => `
+    <div style="border:1px solid var(--gray-200);border-radius:6px;padding:8px;margin-bottom:6px;">
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;">
+        <span style="font-size:11px;color:var(--gray-500);min-width:70px;">${rowLabel} #${i+1}</span>
+        <input type="text" placeholder="name" value="${esc(r.name || '')}"
+          oninput="entryEditorUpdate(${i}, 'name', this.value)"
+          style="flex:1;font-size:12px;padding:3px 8px;border:1px solid var(--gray-200);border-radius:4px;">
+        ${s.mode === 'monomers' ? `
+          <input type="text" placeholder="role" value="${esc(r.role || '')}"
+            oninput="entryEditorUpdate(${i}, 'role', this.value)"
+            style="width:120px;font-size:12px;padding:3px 8px;border:1px solid var(--gray-200);border-radius:4px;">
+        ` : ''}
+        <button class="psearch-add-btn" style="background:#0284c7;border-color:#0284c7;font-size:10.5px;padding:2px 8px;" onclick="entryEditorShowStruct(${i})">構造</button>
+        ${rows.length > 1 ? `<button class="psearch-add-btn" style="background:#dc2626;border-color:#dc2626;font-size:10.5px;padding:2px 8px;" onclick="entryEditorRemove(${i})">×</button>` : ''}
+      </div>
+      <textarea placeholder="SMILES ${s.mode === 'polymer' ? '（[$] = 結合点）' : '（化合物 SMILES）'}"
+        oninput="entryEditorUpdate(${i}, 'smiles', this.value)"
+        style="width:100%;font-family:var(--mono);font-size:12px;padding:5px 8px;border:1px solid var(--gray-200);border-radius:4px;resize:vertical;min-height:40px;">${esc(r.smiles || '')}</textarea>
+    </div>
+  `).join('') || '<div style="color:var(--gray-400);font-size:12px;padding:10px 0;">まだ行がありません。「＋ 行を追加」を押してください。</div>';
+}
+
+function entryEditorUpdate(i, field, value) {
+  const s = window._activeEditorModal?._state;
+  if (!s) return;
+  const rows = s.mode === 'polymer' ? s.elements : s.monomers;
+  if (rows[i]) rows[i][field] = value;
+}
+
+function entryEditorAdd() {
+  const s = window._activeEditorModal?._state;
+  if (!s) return;
+  if (s.mode === 'polymer') s.elements.push({ name: '', smiles: '', polyGroup: '', note: '' });
+  else s.monomers.push({ name: '', smiles: '', role: '' });
+  renderEntryEditorBody();
+}
+
+function entryEditorRemove(i) {
+  const s = window._activeEditorModal?._state;
+  if (!s) return;
+  const rows = s.mode === 'polymer' ? s.elements : s.monomers;
+  if (rows.length <= 1) return;
+  rows.splice(i, 1);
+  renderEntryEditorBody();
+}
+
+function entryEditorShowStruct(i) {
+  const s = window._activeEditorModal?._state;
+  if (!s) return;
+  const rows = s.mode === 'polymer' ? s.elements : s.monomers;
+  const smi = (rows[i]?.smiles || '').trim();
+  if (!smi) { alert('SMILES が空です'); return; }
+  showStructureFromSmiles(smi);
+}
+
+function entryEditorSaveLocal() {
+  const s = window._activeEditorModal?._state;
+  if (!s) return;
+  if (s.mode === 'polymer') s.p.elements = s.elements;
+  else s.p.monomers = s.monomers;
+  saveCustomEntry(s.p);
+  window._activeEditorModal.remove();
+  polymerSearch(document.getElementById('psearch-input').value);
+}
+
+function entryEditorOpenIssue() {
+  const s = window._activeEditorModal?._state;
+  if (!s) return;
+  const p = s.p;
+  const elements = s.mode === 'polymer' ? s.elements : (p.elements || []);
+  const monomers = s.mode === 'monomers' ? s.monomers : (p.monomers || []);
+  openIssueForm({
+    key: p.key,
+    label: p.label || `${p.key}|${p.displayName || ''}`,
+    displayName: p.displayName || '',
+    defaultClass: p.defaultClass || 'Homopolymer',
+    elements: JSON.stringify(elements, null, 2),
+    monomers: JSON.stringify(monomers, null, 2)
+  });
 }
 
 async function fetchPubChemCard(tok) {
@@ -1794,16 +1993,17 @@ function openDbRegisterFormRow(id, i) {
   });
 }
 
-function openIssueForm({ key, label, displayName, defaultClass, elements }) {
-  const params = new URLSearchParams({
+function openIssueForm({ key, label, displayName, defaultClass, elements, monomers }) {
+  const p = {
     template: 'add-polymer.yml',
     title: `[polymer-db] add: ${key}`,
     key, label, displayName,
     'defaultClass': defaultClass || 'Homopolymer',
     aliases: '',
     elements
-  });
-  const url = `https://github.com/atsumitanaka/apps/issues/new?${params.toString()}`;
+  };
+  if (monomers) p.monomers = monomers;
+  const url = `https://github.com/atsumitanaka/apps/issues/new?${new URLSearchParams(p).toString()}`;
   window.open(url, '_blank', 'noopener');
 }
 
