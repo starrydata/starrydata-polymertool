@@ -1669,63 +1669,139 @@ function renderPubChemResultCard(id, key, name, smiles) {
       <span class="psearch-key">${esc(key)}</span>
       <span class="psearch-badge-pubchem">PubChem</span>
       <span class="psearch-fullname">${esc(name)}</span>
-      <button class="psearch-add-btn" style="background:#0284c7;border-color:#0284c7;margin-right:4px;" onclick="showStructureFromCard(${id})">構造確認</button>
-      <button class="psearch-add-btn psearch-add-btn-pubchem" onclick="addFromPubChem(${id})">＋ このセッションで追加</button>
-      <button class="psearch-add-btn" style="background:#16a34a;border-color:#16a34a;margin-left:4px;" onclick="openDbRegisterForm(${id})" title="Issue Form を開いて DB に永続登録リクエスト">＋ DB に登録リクエスト</button>
+      <button class="psearch-add-btn psearch-add-btn-pubchem" onclick="addFromPubChem(${id})" title="このブラウザだけに一時登録して component に追加">＋ このセッションで追加</button>
+      <button class="psearch-add-btn" style="background:#16a34a;border-color:#16a34a;margin-left:4px;" onclick="openDbRegisterForm(${id})" title="全部品を含む1エントリとして Issue Form を開く">＋ DB に登録リクエスト（全体）</button>
     </div>
-    <div class="psearch-elem-row" style="align-items:flex-start;">
-      <span class="psearch-elem-badge" style="background:#fef3c7;color:#92400e;border-color:#fde68a;margin-top:6px;">化合物 SMILES</span>
-      <textarea id="psearch-smiles-edit-${id}"
-        oninput="updateCardSmiles(${id}, this.value)"
-        style="flex:1;background:#fffbeb;color:#92400e;font-family:var(--mono);font-size:12px;border:1px solid #fde68a;border-radius:6px;padding:6px 10px;resize:vertical;min-height:52px;line-height:1.4;">${esc(smiles)}</textarea>
+    <div id="psearch-rows-${id}">
+      ${renderElementRows(id)}
     </div>
-    <div style="padding:4px 12px 7px;font-size:11px;color:var(--gray-400);">
-      ⚠ SMILES は手動で編集できます。高分子繰り返し単位として使う場合は <code style="background:var(--gray-100);padding:1px 4px;border-radius:3px;">[$]</code> を結合点に追加してから登録してください。
+    <div style="padding:6px 12px 10px;display:flex;justify-content:space-between;align-items:center;">
+      <button class="psearch-add-btn" style="background:#6b7280;border-color:#6b7280;font-size:11px;padding:4px 10px;" onclick="addElementRow(${id})">＋ 部品行を追加</button>
+      <span style="font-size:11px;color:var(--gray-400);">⚠ [$] を結合点に追加してから DB 登録してください</span>
     </div>
   </div>`;
 }
 
-function updateCardSmiles(id, newSmiles) {
+function renderElementRows(id) {
   const entry = _pubchemCache.get(id);
-  if (!entry) return;
-  entry.elements[0].smiles = newSmiles;
+  if (!entry) return '';
+  return entry.elements.map((el, i) => `
+    <div class="psearch-elem-row" style="align-items:flex-start;flex-direction:column;gap:4px;padding:8px 12px;border-top:1px solid #fde68a;">
+      <div style="display:flex;gap:6px;align-items:center;width:100%;">
+        <span class="psearch-elem-badge" style="background:#fef3c7;color:#92400e;border-color:#fde68a;">部品 ${i + 1}</span>
+        <input type="text" placeholder="部品名（例: BHF unit）" value="${esc(el.name || '')}"
+          oninput="updateElementField(${id}, ${i}, 'name', this.value)"
+          style="flex:1;font-size:12px;padding:3px 8px;border:1px solid #fde68a;border-radius:4px;background:white;">
+        <button class="psearch-add-btn" style="background:#0284c7;border-color:#0284c7;font-size:11px;padding:3px 8px;" onclick="showStructureFromRow(${id}, ${i})">構造確認</button>
+        <button class="psearch-add-btn" style="background:#16a34a;border-color:#16a34a;font-size:11px;padding:3px 8px;" onclick="openDbRegisterFormRow(${id}, ${i})" title="この部品だけを1エントリとして Issue Form を開く">＋ 部品として登録</button>
+        ${entry.elements.length > 1 ? `<button class="psearch-add-btn" style="background:#dc2626;border-color:#dc2626;font-size:11px;padding:3px 8px;" onclick="removeElementRow(${id}, ${i})" title="この部品行を削除">×</button>` : ''}
+      </div>
+      <textarea
+        oninput="updateElementField(${id}, ${i}, 'smiles', this.value)"
+        style="width:100%;background:#fffbeb;color:#92400e;font-family:var(--mono);font-size:12px;border:1px solid #fde68a;border-radius:6px;padding:6px 10px;resize:vertical;min-height:44px;line-height:1.4;">${esc(el.smiles || '')}</textarea>
+    </div>
+  `).join('');
 }
 
-function showStructureFromCard(id) {
+function reRenderRows(id) {
+  const container = document.getElementById(`psearch-rows-${id}`);
+  if (container) container.innerHTML = renderElementRows(id);
+}
+
+function updateElementField(id, i, field, value) {
+  const entry = _pubchemCache.get(id);
+  if (!entry || !entry.elements[i]) return;
+  entry.elements[i][field] = value;
+}
+
+function addElementRow(id) {
   const entry = _pubchemCache.get(id);
   if (!entry) return;
-  showStructureFromSmiles(entry.elements[0].smiles);
+  entry.elements.push({ name: '', smiles: '', polyGroup: '', note: '' });
+  reRenderRows(id);
+}
+
+function removeElementRow(id, i) {
+  const entry = _pubchemCache.get(id);
+  if (!entry || entry.elements.length <= 1) return;
+  entry.elements.splice(i, 1);
+  reRenderRows(id);
+}
+
+function showStructureFromRow(id, i) {
+  const entry = _pubchemCache.get(id);
+  if (!entry || !entry.elements[i]) return;
+  const smi = (entry.elements[i].smiles || '').trim();
+  if (!smi) { alert('SMILES が空です'); return; }
+  showStructureFromSmiles(smi);
 }
 
 function openDbRegisterForm(id) {
   const entry = _pubchemCache.get(id);
   if (!entry) return;
-  const smiles = (entry.elements[0].smiles || '').trim();
-  if (!smiles) { alert('SMILES が空です'); return; }
+  const validElements = entry.elements.filter(e => (e.smiles || '').trim());
+  if (!validElements.length) { alert('SMILES が入力された部品行がありません'); return; }
 
   const suggestedKey = prompt(
-    'DB 登録用の key（一意の短縮記号）を入力してください:\n例: PSU, BHF, TESTPOLY',
+    'DB 登録用の key（一意の短縮記号）を入力してください:\n例: PSU, PAES-BHF',
     entry.key.replace(/^DECIMER\d+$/, '')
   );
   if (!suggestedKey) return;
 
   const displayName = entry.displayName && entry.displayName !== '（PubChem照合失敗）'
     ? entry.displayName : '';
-  const elementsJson = JSON.stringify([{
-    name: entry.elements[0].name || '',
-    smiles,
-    polyGroup: entry.elements[0].polyGroup || '',
-    note: entry.elements[0].note || ''
-  }], null, 2);
+  const defaultClass = validElements.length >= 2 ? 'Copolymer' : 'Homopolymer';
+  const elementsJson = JSON.stringify(validElements.map(e => ({
+    name: e.name || '', smiles: e.smiles.trim(),
+    polyGroup: e.polyGroup || '', note: e.note || ''
+  })), null, 2);
 
-  const params = new URLSearchParams({
-    template: 'add-polymer.yml',
-    title: `[polymer-db] add: ${suggestedKey}`,
+  openIssueForm({
     key: suggestedKey,
     label: `${suggestedKey}|${displayName}`,
     displayName,
-    aliases: '',
+    defaultClass,
     elements: elementsJson
+  });
+}
+
+function openDbRegisterFormRow(id, i) {
+  const entry = _pubchemCache.get(id);
+  if (!entry || !entry.elements[i]) return;
+  const el = entry.elements[i];
+  const smi = (el.smiles || '').trim();
+  if (!smi) { alert('この部品の SMILES が空です'); return; }
+
+  const suggested = prompt(
+    'この部品の key（一意の短縮記号）を入力してください:\n例: BHF, DFDPS, MDA-BMI',
+    el.name ? el.name.split(/[\s(]/)[0].replace(/[^A-Za-z0-9\-]/g, '').toUpperCase().slice(0, 20) : ''
+  );
+  if (!suggested) return;
+
+  const elementsJson = JSON.stringify([{
+    name: el.name || `${suggested} unit`,
+    smiles: smi,
+    polyGroup: el.polyGroup || '',
+    note: el.note || ''
+  }], null, 2);
+
+  openIssueForm({
+    key: suggested,
+    label: `${suggested}|${el.name || suggested}`,
+    displayName: el.name || suggested,
+    defaultClass: 'Homopolymer',
+    elements: elementsJson
+  });
+}
+
+function openIssueForm({ key, label, displayName, defaultClass, elements }) {
+  const params = new URLSearchParams({
+    template: 'add-polymer.yml',
+    title: `[polymer-db] add: ${key}`,
+    key, label, displayName,
+    'defaultClass': defaultClass || 'Homopolymer',
+    aliases: '',
+    elements
   });
   const url = `https://github.com/atsumitanaka/apps/issues/new?${params.toString()}`;
   window.open(url, '_blank', 'noopener');
