@@ -12,7 +12,6 @@ const POLYMER_DB = [
     "defaultClass": "Homopolymer",
     "aliases": [
       "Noryl",
-      "SA9000",
       "SA120",
       "SA90",
       "PPO731",
@@ -919,6 +918,54 @@ const POLYMER_DB = [
         "name": "4,4'-dichlorodiphenyl sulfone (DCDPS)",
         "smiles": "Clc1ccc(S(=O)(=O)c2ccc(Cl)cc2)cc1",
         "role": "diaryl halide"
+      }
+    ]
+  },
+  {
+    "key": "SA9000",
+    "label": "SA9000|Methacrylate-terminated PPE (MA-PPE)",
+    "displayName": "α,ω-bis(methacryloyloxy)-poly(2,6-dimethyl-1,4-phenylene ether) [SABIC SA9000]",
+    "defaultClass": "Copolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "SA9000",
+      "SA-9000",
+      "SABIC SA9000",
+      "methacrylate PPE",
+      "MA-PPE",
+      "reactive PPE",
+      "vinyl PPE",
+      "telechelic PPE"
+    ],
+    "elements": [
+      {
+        "name": "methacrylate end-cap unit",
+        "smiles": "CC(=C)C(=O)Oc1c(C)cc([$])cc1C",
+        "polyGroup": "methacrylate",
+        "note": "オリゴマー鎖の両端に付加する末端メタクリル基ユニット。ラジカル硬化で架橋点になる"
+      },
+      {
+        "name": "2,6-dimethyl-1,4-phenylene ether repeat unit",
+        "smiles": "[$]Oc1c(C)cc([$])cc1C",
+        "polyGroup": "",
+        "note": "内部の PPE 繰り返し単位（通常 n ≈ 5〜15 の低分子量オリゴマー）"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "2,6-dimethylphenol (2,6-xylenol)",
+        "smiles": "Cc1cccc(C)c1O",
+        "role": "phenol"
+      },
+      {
+        "name": "methacryloyl chloride",
+        "smiles": "CC(=C)C(=O)Cl",
+        "role": "acryloyl chloride"
+      },
+      {
+        "name": "methacrylic anhydride",
+        "smiles": "CC(=C)C(=O)OC(=O)C(C)=C",
+        "role": "acryloyl anhydride (alt.)"
       }
     ]
   },
