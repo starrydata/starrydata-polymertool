@@ -1,7 +1,7 @@
-# polymer_smiles_tool
+# starrydata-polymertool
 
 ポリマー組成を BigSMILES で入力し、データベース登録用の JSON を生成するツール。
-GitHub Pages: <https://atsumitanaka.github.io/apps/polymer_smiles_tool/>
+GitHub Pages: <https://starrydata.github.io/starrydata-polymertool/>
 
 ## できること
 
