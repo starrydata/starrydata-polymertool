@@ -809,7 +809,7 @@ pre.json-pre {
     <div class="psearch-bar">
       <span class="psearch-label">🔍 ポリマー名検索</span>
       <input type="text" id="psearch-input" autocomplete="new-password"
-        placeholder="略称・名称を入力、または構造式画像をドロップ"
+        placeholder="略称・名称を入力、または構造式画像をドロップ / 貼り付け"
         oninput="polymerSearch(this.value)"
         onkeydown="if(event.key==='Escape')clearPolymerSearch()">
       <button class="psearch-img-btn" onclick="document.getElementById('imgSearchInput').click()" title="構造式画像から検索（DECIMER）">🖼</button>
@@ -1689,6 +1689,21 @@ function handleImageDrop(e) {
   const file = [...(e.dataTransfer.files || [])].find(f => f.type.startsWith('image/'));
   if (file) handleImageFile(file);
 }
+
+document.addEventListener('paste', e => {
+  const items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.kind === 'file' && item.type.startsWith('image/')) {
+      const file = item.getAsFile();
+      if (file) {
+        e.preventDefault();
+        handleImageFile(file);
+        return;
+      }
+    }
+  }
+});
 
 function handleImageFile(file) {
   if (!file) return;

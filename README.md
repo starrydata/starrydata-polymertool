@@ -7,7 +7,7 @@ GitHub Pages: <https://starrydata.github.io/starrydata-polymertool/>
 
 - 主要ポリマー（PPE, PSU, PES, BMI, CE, PI, Epoxy など 26 種）のプリセット
 - 略称 / 商品名 / 別名からの高速検索（Noryl, Ryton, Kapton など）
-- **画像認識**: 分子構造画像を検索窓にドロップ → Gemini で SMILES 抽出
+- **画像認識**: 分子構造画像を検索窓にドロップ、またはクリップボードから貼り付け（Ctrl+V / ⌘V）→ Gemini で SMILES 抽出
 - **モノマー逆推定**: ポリマー SMILES から Gemini が構成モノマーを推定
 - **PubChem 連携**: 化合物名 → SMILES / SMILES → 化合物名を都度取得
 - **構造描画**: SMILES を SmilesDrawer で描画確認（`[$]` は `*` に置換）
@@ -70,7 +70,7 @@ DB 追加フロー用:
 
 ## 画像 → SMILES → モノマー フロー
 
-1. 分子構造画像を検索窓にドロップ
+1. 分子構造画像を検索窓にドロップ、またはクリップボードから貼り付け（Ctrl+V / ⌘V、ページのどこでも可）
 2. **Gemini Vision API** で SMILES 認識（要 API Key、⚙ から設定）
 3. **PubChem** で化合物名を照合（成功すれば IUPAC 名表示）
 4. **Gemini** が SMILES → 構成モノマーを逆推定
