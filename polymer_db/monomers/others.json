@@ -1,0 +1,65 @@
+[
+  {
+    "key": "HCHO",
+    "label": "HCHO|Formaldehyde",
+    "displayName": "formaldehyde (methanal)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "formaldehyde",
+      "methanal",
+      "HCHO",
+      "formalin"
+    ],
+    "elements": [
+      {
+        "name": "formaldehyde",
+        "smiles": "C=O",
+        "polyGroup": "aldehyde",
+        "note": "PBz・POM・PF 樹脂・尿素樹脂 主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "ALBR",
+    "label": "ALBR|Allyl Bromide",
+    "displayName": "allyl bromide (3-bromopropene)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "allyl bromide",
+      "3-bromopropene",
+      "ALBR"
+    ],
+    "elements": [
+      {
+        "name": "allyl bromide",
+        "smiles": "C=CCBr",
+        "polyGroup": "alkyl halide",
+        "note": "DABPA 合成のアリル化剤"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "DPC",
+    "label": "DPC|Diphenyl Carbonate",
+    "displayName": "diphenyl carbonate",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "DPC",
+      "diphenyl carbonate"
+    ],
+    "elements": [
+      {
+        "name": "diphenyl carbonate",
+        "smiles": "O=C(Oc1ccccc1)Oc1ccccc1",
+        "polyGroup": "carbonate",
+        "note": "PC 溶融重合主原料（phosgene fee 法）"
+      }
+    ],
+    "monomers": []
+  }
+]

@@ -1,0 +1,163 @@
+[
+  {
+    "key": "BPA",
+    "label": "BPA|Bisphenol A",
+    "displayName": "2,2-bis(4-hydroxyphenyl)propane (bisphenol A)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "bisphenol A",
+      "2,2-bis(4-hydroxyphenyl)propane",
+      "4,4'-isopropylidenediphenol",
+      "BPA",
+      "DIAN",
+      "para-bis-A"
+    ],
+    "elements": [
+      {
+        "name": "bisphenol A",
+        "smiles": "Oc1ccc(C(C)(C)c2ccc(O)cc2)cc1",
+        "polyGroup": "bisphenol",
+        "note": "エポキシ・PC・PSU・CE等の主原料。化合物SMILES（[$]なし）"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "BPS",
+    "label": "BPS|Bisphenol S",
+    "displayName": "4,4'-dihydroxydiphenyl sulfone (bisphenol S)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "bisphenol S",
+      "4,4'-dihydroxydiphenyl sulfone",
+      "DHDPS",
+      "BPS",
+      "bis(4-hydroxyphenyl) sulfone"
+    ],
+    "elements": [
+      {
+        "name": "bisphenol S",
+        "smiles": "Oc1ccc(S(=O)(=O)c2ccc(O)cc2)cc1",
+        "polyGroup": "bisphenol",
+        "note": "PES・PPSU 系の主原料。BPA より熱安定性・剛性高い"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "BHF",
+    "label": "BHF|9,9-Bis(4-hydroxyphenyl)fluorene",
+    "displayName": "9,9-bis(4-hydroxyphenyl)fluorene",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "BHF",
+      "9,9-bis(4-hydroxyphenyl)fluorene",
+      "BPFL",
+      "bisphenol FL",
+      "fluorene bisphenol"
+    ],
+    "elements": [
+      {
+        "name": "BHF",
+        "smiles": "Oc1ccc(C2(c3ccc(O)cc3)c3ccccc3-c3ccccc32)cc1",
+        "polyGroup": "bisphenol",
+        "note": "フルオレンビスフェノール。低誘電・高屈折率ポリマー原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "26XYL",
+    "label": "26XYL|2,6-Dimethylphenol",
+    "displayName": "2,6-dimethylphenol (2,6-xylenol)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "2,6-dimethylphenol",
+      "2,6-xylenol",
+      "26-xylenol",
+      "DMP",
+      "26DMP",
+      "2,6-DMP"
+    ],
+    "elements": [
+      {
+        "name": "2,6-dimethylphenol",
+        "smiles": "Cc1cccc(C)c1O",
+        "polyGroup": "phenol",
+        "note": "PPE / PPO 主原料。酸化重合で PPE を与える"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "26DMTP",
+    "label": "26DMTP|2,6-Dimethylthiophenol",
+    "displayName": "2,6-dimethylthiophenol",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "2,6-dimethylthiophenol",
+      "2,6-dimethylbenzenethiol",
+      "26DMTP"
+    ],
+    "elements": [
+      {
+        "name": "2,6-dimethylthiophenol",
+        "smiles": "Cc1cccc(C)c1S",
+        "polyGroup": "thiophenol",
+        "note": "PMPS（フェニレンスルフィド）主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "BP44",
+    "label": "BP44|4,4'-Biphenol",
+    "displayName": "4,4'-biphenol (4,4'-dihydroxybiphenyl)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "4,4'-biphenol",
+      "4,4'-dihydroxybiphenyl",
+      "biphenol",
+      "BP",
+      "BPH"
+    ],
+    "elements": [
+      {
+        "name": "4,4'-biphenol",
+        "smiles": "Oc1ccc(-c2ccc(O)cc2)cc1",
+        "polyGroup": "biphenol",
+        "note": "BPVE・PSU 系の共モノマー"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "HQ",
+    "label": "HQ|Hydroquinone",
+    "displayName": "hydroquinone (1,4-benzenediol)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "hydroquinone",
+      "1,4-benzenediol",
+      "1,4-dihydroxybenzene",
+      "HQ",
+      "quinol"
+    ],
+    "elements": [
+      {
+        "name": "hydroquinone",
+        "smiles": "Oc1ccc(O)cc1",
+        "polyGroup": "phenol",
+        "note": "PEEK・LCP 主原料"
+      }
+    ],
+    "monomers": []
+  }
+]

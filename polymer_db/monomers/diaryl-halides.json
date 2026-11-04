@@ -1,0 +1,151 @@
+[
+  {
+    "key": "TPC",
+    "label": "TPC|Terephthaloyl Chloride",
+    "displayName": "terephthaloyl chloride (1,4-benzenedicarbonyl dichloride)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "TPC",
+      "terephthaloyl chloride",
+      "1,4-benzenedicarbonyl dichloride"
+    ],
+    "elements": [
+      {
+        "name": "terephthaloyl chloride",
+        "smiles": "O=C(Cl)c1ccc(C(=O)Cl)cc1",
+        "polyGroup": "acid chloride",
+        "note": "Kevlar・p-アラミド主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "IPC",
+    "label": "IPC|Isophthaloyl Chloride",
+    "displayName": "isophthaloyl chloride",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "IPC",
+      "isophthaloyl chloride",
+      "1,3-benzenedicarbonyl dichloride"
+    ],
+    "elements": [
+      {
+        "name": "isophthaloyl chloride",
+        "smiles": "O=C(Cl)c1cccc(C(=O)Cl)c1",
+        "polyGroup": "acid chloride",
+        "note": "Nomex・m-アラミド主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "DCDPS",
+    "label": "DCDPS|4,4'-Dichlorodiphenyl Sulfone",
+    "displayName": "4,4'-dichlorodiphenyl sulfone",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "DCDPS",
+      "4,4'-dichlorodiphenyl sulfone",
+      "bis(4-chlorophenyl) sulfone"
+    ],
+    "elements": [
+      {
+        "name": "DCDPS",
+        "smiles": "Clc1ccc(S(=O)(=O)c2ccc(Cl)cc2)cc1",
+        "polyGroup": "diaryl halide",
+        "note": "PSU・PES 主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "DFDPS",
+    "label": "DFDPS|4,4'-Difluorodiphenyl Sulfone",
+    "displayName": "4,4'-difluorodiphenyl sulfone",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "DFDPS",
+      "4,4'-difluorodiphenyl sulfone",
+      "bis(4-fluorophenyl) sulfone"
+    ],
+    "elements": [
+      {
+        "name": "DFDPS",
+        "smiles": "Fc1ccc(S(=O)(=O)c2ccc(F)cc2)cc1",
+        "polyGroup": "diaryl halide",
+        "note": "高分子量 PES / PSU 主原料。DCDPS より高活性"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "DFBP",
+    "label": "DFBP|4,4'-Difluorobenzophenone",
+    "displayName": "4,4'-difluorobenzophenone",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "DFBP",
+      "4,4'-difluorobenzophenone",
+      "bis(4-fluorophenyl) ketone"
+    ],
+    "elements": [
+      {
+        "name": "DFBP",
+        "smiles": "O=C(c1ccc(F)cc1)c1ccc(F)cc1",
+        "polyGroup": "diaryl halide",
+        "note": "PEEK・PEK 主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "DCB14",
+    "label": "DCB14|1,4-Dichlorobenzene",
+    "displayName": "1,4-dichlorobenzene (para-dichlorobenzene)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "1,4-dichlorobenzene",
+      "para-dichlorobenzene",
+      "p-DCB",
+      "DCB"
+    ],
+    "elements": [
+      {
+        "name": "1,4-dichlorobenzene",
+        "smiles": "Clc1ccc(Cl)cc1",
+        "polyGroup": "diaryl halide",
+        "note": "PPS 主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "PHOS",
+    "label": "PHOS|Phosgene",
+    "displayName": "phosgene (carbonyl dichloride)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "phosgene",
+      "carbonyl dichloride",
+      "COCl2",
+      "PHOS"
+    ],
+    "elements": [
+      {
+        "name": "phosgene",
+        "smiles": "O=C(Cl)Cl",
+        "polyGroup": "carbonyl chloride",
+        "note": "PC 界面重合主原料。DPCa（DiphenylCarbonate）で代替も"
+      }
+    ],
+    "monomers": []
+  }
+]

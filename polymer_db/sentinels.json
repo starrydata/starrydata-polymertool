@@ -1,0 +1,34 @@
+[
+  {
+    "key": "Other",
+    "label": "Other",
+    "displayName": "",
+    "defaultClass": "Homopolymer",
+    "aliases": [],
+    "elements": [
+      {
+        "name": "",
+        "smiles": "",
+        "polyGroup": "",
+        "note": ""
+      }
+    ],
+    "sentinel": true
+  },
+  {
+    "key": "Crosslinker",
+    "label": "Crosslinker",
+    "displayName": "",
+    "defaultClass": "Homopolymer",
+    "aliases": [],
+    "elements": [
+      {
+        "name": "",
+        "smiles": "",
+        "polyGroup": "",
+        "note": ""
+      }
+    ],
+    "sentinel": true
+  }
+]

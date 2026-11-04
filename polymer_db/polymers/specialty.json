@@ -1,0 +1,271 @@
+[
+  {
+    "key": "PBO",
+    "label": "PBO|Poly(p-phenylene benzobisoxazole)",
+    "displayName": "poly(p-phenylene-2,6-benzobisoxazole)",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "Zylon",
+      "polybenzoxazole",
+      "PBO fiber"
+    ],
+    "elements": [
+      {
+        "name": "p-phenylene benzobisoxazole unit",
+        "smiles": "[$]c1ccc2nc3ccc([$])cc3oc2c1",
+        "polyGroup": "",
+        "note": "⚠ 繰り返し単位(要確認)"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "4,6-diaminoresorcinol (DAR)",
+        "smiles": "Nc1cc(N)c(O)cc1O",
+        "role": "diaminodiol"
+      },
+      {
+        "name": "terephthalic acid",
+        "smiles": "OC(=O)c1ccc(C(=O)O)cc1",
+        "role": "diacid"
+      }
+    ]
+  },
+  {
+    "key": "PO",
+    "label": "PO|Polyolefin",
+    "displayName": "polyethylene (PE)",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "PE",
+      "PP",
+      "HDPE",
+      "LDPE",
+      "LLDPE",
+      "Marlex",
+      "Fortiflex",
+      "polyethylene",
+      "polypropylene",
+      "Zeonex",
+      "COC",
+      "COP"
+    ],
+    "elements": [
+      {
+        "name": "ethylene unit",
+        "smiles": "[$]CC[$]",
+        "polyGroup": "",
+        "note": "PEを例示。PP: [$]CC(C)[$]、LLDPE等は種類によって修正してください"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "ethylene",
+        "smiles": "C=C",
+        "role": "olefin"
+      }
+    ]
+  },
+  {
+    "key": "Fluoropolymer",
+    "label": "Fluoropolymer",
+    "displayName": "polytetrafluoroethylene (PTFE)",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "PTFE",
+      "FEP",
+      "PFA",
+      "PVDF",
+      "PCTFE",
+      "ETFE",
+      "Teflon",
+      "Dyneon",
+      "Neoflon",
+      "Kynar",
+      "Halar",
+      "Fluon",
+      "fluoropolymer"
+    ],
+    "elements": [
+      {
+        "name": "tetrafluoroethylene unit",
+        "smiles": "[$]C(F)(F)C(F)(F)[$]",
+        "polyGroup": "",
+        "note": "PTFEを例示。FEP・PVDF等は種類によって修正してください"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "tetrafluoroethylene (TFE)",
+        "smiles": "FC(F)=C(F)F",
+        "role": "fluoroolefin"
+      }
+    ]
+  },
+  {
+    "key": "PVDF",
+    "label": "PVDF|Poly(vinylidene fluoride)",
+    "displayName": "poly(vinylidene fluoride)",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "PVDF",
+      "Kynar",
+      "Solef",
+      "KF Polymer",
+      "Neoflon PVDF",
+      "Hylar",
+      "polyvinylidene fluoride"
+    ],
+    "elements": [
+      {
+        "name": "vinylidene fluoride unit",
+        "smiles": "[$]CC(F)(F)[$]",
+        "polyGroup": "",
+        "note": "β晶が圧電性を示す"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "vinylidene fluoride",
+        "smiles": "C=C(F)F",
+        "role": "vinyl"
+      }
+    ]
+  },
+  {
+    "key": "PDMS",
+    "label": "PDMS|Poly(dimethylsiloxane)",
+    "displayName": "poly(dimethylsiloxane)",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "PDMS",
+      "Sylgard",
+      "Silastic",
+      "Elastosil",
+      "KE-1200",
+      "SE-1700",
+      "silicone rubber",
+      "dimethyl silicone",
+      "silicone oil"
+    ],
+    "elements": [
+      {
+        "name": "dimethylsiloxane unit",
+        "smiles": "[$][Si](C)(C)O[$]",
+        "polyGroup": "",
+        "note": "D4 開環重合が主流。低Tg・高疎水性"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "octamethylcyclotetrasiloxane (D4)",
+        "smiles": "C[Si]1(C)O[Si](C)(C)O[Si](C)(C)O[Si](C)(C)O1",
+        "role": "cyclic siloxane"
+      },
+      {
+        "name": "dichlorodimethylsilane (代替)",
+        "smiles": "C[Si](C)(Cl)Cl",
+        "role": "chlorosilane"
+      }
+    ]
+  },
+  {
+    "key": "PEG",
+    "label": "PEG/PEO|Poly(ethylene glycol / oxide)",
+    "displayName": "poly(ethylene glycol) / poly(ethylene oxide)",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "PEG",
+      "PEO",
+      "polyethylene glycol",
+      "polyethylene oxide",
+      "Carbowax",
+      "Polyox",
+      "Alkox"
+    ],
+    "elements": [
+      {
+        "name": "ethylene oxide unit",
+        "smiles": "[$]OCC[$]",
+        "polyGroup": "",
+        "note": "低分子量=PEG、高分子量=PEO。水溶性ポリマーの代表"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "ethylene oxide",
+        "smiles": "C1CO1",
+        "role": "epoxide"
+      }
+    ]
+  },
+  {
+    "key": "COC",
+    "label": "COC|Cyclic Olefin Copolymer",
+    "displayName": "ethylene-norbornene copolymer (COC)",
+    "defaultClass": "Copolymer",
+    "aliases": [
+      "COC",
+      "Topas",
+      "Apel",
+      "Arton",
+      "Zeonex",
+      "Zeonor",
+      "cyclic olefin copolymer",
+      "cyclic olefin polymer",
+      "COP"
+    ],
+    "elements": [
+      {
+        "name": "ethylene unit",
+        "smiles": "[$]CC[$]",
+        "polyGroup": "",
+        "note": "Topas 8007 の場合 60〜80 mol%"
+      },
+      {
+        "name": "norbornene unit",
+        "smiles": "[$]C1CC2CC1C(C2)[$]",
+        "polyGroup": "",
+        "note": "⚠ 開環／メタロセン触媒により結合様式は差異あり"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "ethylene",
+        "smiles": "C=C",
+        "role": "olefin"
+      },
+      {
+        "name": "norbornene",
+        "smiles": "C1CC2CC1C=C2",
+        "role": "cyclic olefin"
+      }
+    ]
+  },
+  {
+    "key": "PMP",
+    "label": "PMP|Poly(4-methyl-1-pentene) [TPX]",
+    "displayName": "poly(4-methyl-1-pentene)",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "PMP",
+      "TPX",
+      "Mitsui TPX",
+      "poly-4-methylpentene"
+    ],
+    "elements": [
+      {
+        "name": "4-methyl-1-pentene unit",
+        "smiles": "[$]CC(CC(C)C)[$]",
+        "polyGroup": "",
+        "note": "透明・耐熱ポリオレフィン"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "4-methyl-1-pentene",
+        "smiles": "CC(C)CC=C",
+        "role": "olefin"
+      }
+    ]
+  }
+]

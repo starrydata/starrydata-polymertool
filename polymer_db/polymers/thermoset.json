@@ -1,0 +1,44 @@
+[
+  {
+    "key": "PU",
+    "label": "PU|Polyurethane",
+    "displayName": "polyurethane (MDI-BDO)",
+    "defaultClass": "Copolymer",
+    "aliases": [
+      "Pellethane",
+      "Tecoflex",
+      "Elasthane",
+      "Texin",
+      "Desmopan",
+      "MDI",
+      "TDI",
+      "polyurethane"
+    ],
+    "elements": [
+      {
+        "name": "BDO (1,4-butanediol) unit",
+        "smiles": "[$]OCCCCO[$]",
+        "polyGroup": "",
+        "note": "ジオール(BDO)のアルキレン部分。[$] = 隣のウレタンカルボニルCとの結合点。実際のジオールに合わせて修正してください"
+      },
+      {
+        "name": "MDI (4,4'-methylenediphenyl diisocyanate) urethane unit",
+        "smiles": "[$]NC(=O)c1ccc(Cc2ccc(C(=O)N[$])cc2)cc1",
+        "polyGroup": "",
+        "note": "ジイソシアネート(MDI)のウレタン部分。[$] = ジオール側OとのO-CO-N結合点。⚠ 要確認"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "1,4-butanediol (BDO)",
+        "smiles": "OCCCCO",
+        "role": "diol"
+      },
+      {
+        "name": "MDI (4,4'-methylenediphenyl diisocyanate)",
+        "smiles": "O=C=Nc1ccc(Cc2ccc(N=C=O)cc2)cc1",
+        "role": "diisocyanate"
+      }
+    ]
+  }
+]

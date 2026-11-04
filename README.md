@@ -15,18 +15,47 @@ GitHub Pages: <https://starrydata.github.io/starrydata-polymertool/>
 
 ## ファイル構成
 
-| ファイル | 役割 |
+| ファイル / ディレクトリ | 役割 |
 | --- | --- |
 | `index.html` | UI + ロジック（単一 HTML） |
-| `polymer_db.json` | ポリマー DB 本体（**編集はこちら**） |
-| `polymer_db.js` | `polymer_db.json` から自動生成される JS 版（ブラウザ用） |
+| `polymer_db/` | ポリマー DB 本体（カテゴリ別分割 JSON、**編集はこちら**） |
+| `polymer_db.js` | `polymer_db/` から自動生成される JS 版（ブラウザ用、編集禁止） |
 | `README.md` | この文書 |
+
+### `polymer_db/` のカテゴリ構成
+
+```
+polymer_db/
+  polymers/
+    high-performance.json   # PPE, PI, PES, PSU, PEEK, LCP, PEI, ...
+    commodity.json          # PS, PET, PVC, PA6, ABS, PLA, SBR, ...
+    thermoset.json          # PU
+    specialty.json          # PDMS, Fluoropolymer, PVDF, COC, ...
+    fiber.json              # Kevlar, Nomex
+    uncategorized.json      # Issue Form 経由の新規ポリマー暫定置き場
+  monomers/
+    bisphenols.json         # BPA, BPS, BHF, HQ, ...
+    diamines.json           # MDA, ODA, PPD, HMDA, ...
+    dianhydrides.json       # PMDA, 6FDA, BPDA
+    diaryl-halides.json     # DCDPS, DFDPS, PHOS (phosgene), ...
+    diacids.json            # TPA, IPA, ADA, ...
+    diols.json              # BDO, EG
+    cyclic-monomers.json    # CPL, LAC, EO, D4, ...
+    epoxides.json           # Epoxy, ECH
+    diisocyanates.json      # MDI, TDI
+    vinyls.json             # STY, MMA, AN, BD, VDF, TFE, ...
+    thermoset-monomers.json # BMI, CE, PBz, DABPA, BRCN
+    others.json             # HCHO, DPC, ALBR, ...
+  sentinels.json            # Other / Crosslinker (UI 末尾固定)
+```
+
+連結順は `build_polymer_db.py` の `POLY_ORDER` / `MONO_ORDER` で定義。UI ドロップダウンの順序もこれに準じる。
 
 DB 追加フロー用:
 - `.github/ISSUE_TEMPLATE/add-polymer.yml` — Issue Form 定義
 - `.github/workflows/add-polymer.yml` — 自動 PR 作成ワークフロー
-- `.github/scripts/parse_polymer_issue.py` — Issue 本文パーサ
-- `.github/scripts/build_polymer_db.py` — JSON → JS 再生成スクリプト
+- `.github/scripts/parse_polymer_issue.py` — Issue 本文パーサ（カテゴリ自動振り分け）
+- `.github/scripts/build_polymer_db.py` — カテゴリ別 JSON → JS 再生成スクリプト
 
 ## DB スキーマ
 
@@ -84,13 +113,15 @@ Gemini API Key は <https://aistudio.google.com> で無料取得可能。localSt
 
 ## 手動で編集する場合（メンテナ）
 
-`polymer_db.json` を編集後、以下でブラウザ用 JS を再生成する:
+`polymer_db/<category>/<file>.json` のいずれかを編集後、以下でブラウザ用 JS を再生成する:
 
 ```sh
 python3 .github/scripts/build_polymer_db.py
 ```
 
-このスクリプトは JSON をそのまま埋め込んで `polymer_db.js` を書き換えるだけで副作用はありません。手動で `polymer_db.js` を編集しないでください（次回自動生成で上書きされます）。
+このスクリプトは分割 JSON を所定順で連結して `polymer_db.js` を書き換えるだけで副作用はありません。手動で `polymer_db.js` を編集しないでください（次回自動生成で上書きされます）。
+
+エントリをカテゴリ間で移動する場合は単に JSON の該当エントリを切り貼りし、スクリプトを再実行してください（同一 key のチェックは `build` 側ではせず、Issue 追加時のみ）。
 
 ## Issue Form が失敗するケース
 
@@ -104,7 +135,7 @@ Actions 失敗時は Issue にエラーログ URL がコメントで自動投稿
 
 | 観点 | セッションで追加 | DB に登録リクエスト |
 |---|---|---|
-| 保存先 | ブラウザの localStorage | GitHub の `polymer_db.json` |
+| 保存先 | ブラウザの localStorage | GitHub の `polymer_db/` 配下 JSON |
 | 反映される人 | あなた1人 | このツールを使う全員 |
 | タイミング | 即時 | PR merge → 数分後 |
 | 別 PC / 別ブラウザ | 反映されない | 反映される |

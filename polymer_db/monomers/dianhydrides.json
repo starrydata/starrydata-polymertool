@@ -1,0 +1,87 @@
+[
+  {
+    "key": "PMDA",
+    "label": "PMDA|Pyromellitic Dianhydride",
+    "displayName": "pyromellitic dianhydride",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "PMDA",
+      "pyromellitic dianhydride",
+      "benzene-1,2,4,5-tetracarboxylic dianhydride"
+    ],
+    "elements": [
+      {
+        "name": "PMDA",
+        "smiles": "O=C1OC(=O)c2cc3C(=O)OC(=O)c3cc12",
+        "polyGroup": "dianhydride",
+        "note": "PI（PMDA-ODA/Kapton）主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "6FDA",
+    "label": "6FDA|Hexafluoroisopropylidene Dianhydride",
+    "displayName": "4,4'-(hexafluoroisopropylidene)diphthalic anhydride",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "6FDA",
+      "hexafluoroisopropylidene diphthalic anhydride",
+      "HFDA"
+    ],
+    "elements": [
+      {
+        "name": "6FDA",
+        "smiles": "O=C1OC(=O)c2cc(C(c3cc4C(=O)OC(=O)c4cc3)(C(F)(F)F)C(F)(F)F)ccc12",
+        "polyGroup": "dianhydride",
+        "note": "低誘電PI・高透明PI（Cardo系）主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "BPDA",
+    "label": "BPDA|3,3',4,4'-Biphenyltetracarboxylic Dianhydride",
+    "displayName": "3,3',4,4'-biphenyltetracarboxylic dianhydride",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "BPDA",
+      "3,3',4,4'-biphenyltetracarboxylic dianhydride",
+      "biphenyl dianhydride"
+    ],
+    "elements": [
+      {
+        "name": "BPDA",
+        "smiles": "O=C1OC(=O)c2cc(-c3ccc4C(=O)OC(=O)c4c3)ccc12",
+        "polyGroup": "dianhydride",
+        "note": "耐熱PI（Upilex-S）主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "MA",
+    "label": "MA|Maleic Anhydride",
+    "displayName": "maleic anhydride (2,5-furandione)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "maleic anhydride",
+      "MA",
+      "MAH",
+      "2,5-furandione"
+    ],
+    "elements": [
+      {
+        "name": "maleic anhydride",
+        "smiles": "O=C1OC(=O)C=C1",
+        "polyGroup": "anhydride",
+        "note": "BMI・SMA 主原料"
+      }
+    ],
+    "monomers": []
+  }
+]

@@ -1,0 +1,156 @@
+[
+  {
+    "key": "MDA",
+    "label": "MDA|4,4'-Methylenedianiline",
+    "displayName": "4,4'-methylenedianiline",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "MDA",
+      "4,4'-methylenedianiline",
+      "4,4'-diaminodiphenylmethane",
+      "DDM",
+      "methylene dianiline"
+    ],
+    "elements": [
+      {
+        "name": "MDA",
+        "smiles": "Nc1ccc(Cc2ccc(N)cc2)cc1",
+        "polyGroup": "diamine",
+        "note": "BMI・エポキシ硬化剤主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "ODA",
+    "label": "ODA|4,4'-Oxydianiline",
+    "displayName": "4,4'-oxydianiline",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "ODA",
+      "4,4'-oxydianiline",
+      "4,4'-diaminodiphenyl ether",
+      "DPE",
+      "diphenylether diamine"
+    ],
+    "elements": [
+      {
+        "name": "ODA",
+        "smiles": "Nc1ccc(Oc2ccc(N)cc2)cc1",
+        "polyGroup": "diamine",
+        "note": "PMDA-ODA PI（Kapton）主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "PPD",
+    "label": "PPD|p-Phenylenediamine",
+    "displayName": "p-phenylenediamine (1,4-diaminobenzene)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "PPD",
+      "p-phenylenediamine",
+      "1,4-phenylenediamine",
+      "para-phenylenediamine"
+    ],
+    "elements": [
+      {
+        "name": "p-phenylenediamine",
+        "smiles": "Nc1ccc(N)cc1",
+        "polyGroup": "diamine",
+        "note": "Kevlar（p-アラミド）主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "MPD",
+    "label": "MPD|m-Phenylenediamine",
+    "displayName": "m-phenylenediamine (1,3-diaminobenzene)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "MPD",
+      "m-phenylenediamine",
+      "1,3-phenylenediamine",
+      "meta-phenylenediamine"
+    ],
+    "elements": [
+      {
+        "name": "m-phenylenediamine",
+        "smiles": "Nc1cccc(N)c1",
+        "polyGroup": "diamine",
+        "note": "Nomex（m-アラミド）主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "HMDA",
+    "label": "HMDA|Hexamethylenediamine",
+    "displayName": "1,6-hexanediamine (hexamethylenediamine)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "HMDA",
+      "hexamethylenediamine",
+      "1,6-hexanediamine",
+      "1,6-diaminohexane"
+    ],
+    "elements": [
+      {
+        "name": "HMDA",
+        "smiles": "NCCCCCCN",
+        "polyGroup": "diamine",
+        "note": "PA66（Nylon 66）主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "ANI",
+    "label": "ANI|Aniline",
+    "displayName": "aniline (aminobenzene)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "aniline",
+      "phenylamine",
+      "aminobenzene"
+    ],
+    "elements": [
+      {
+        "name": "aniline",
+        "smiles": "Nc1ccccc1",
+        "polyGroup": "amine",
+        "note": "ベンゾオキサジン等の一級アミン原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "DAR",
+    "label": "DAR|4,6-Diaminoresorcinol",
+    "displayName": "4,6-diaminoresorcinol",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "DAR",
+      "4,6-diaminoresorcinol",
+      "2,4-diamino-1,5-dihydroxybenzene"
+    ],
+    "elements": [
+      {
+        "name": "DAR",
+        "smiles": "Nc1cc(N)c(O)cc1O",
+        "polyGroup": "diaminodiol",
+        "note": "PBO (Zylon) 主原料"
+      }
+    ],
+    "monomers": []
+  }
+]

@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Parse issue and update polymer_db.json
+      - name: Parse issue and append to polymer_db/
         id: parse
         env:
           ISSUE_BODY: ${{ github.event.issue.body }}
@@ -45,8 +45,10 @@ jobs:
 
             **key**: `${{ steps.parse.outputs.polymer_key }}`
             **label**: `${{ steps.parse.outputs.polymer_label }}`
+            **追加先**: `${{ steps.parse.outputs.target_file }}`
 
-            マージすると `polymer_db.json` に新規エントリが追加されます。
+            マージすると `polymer_db/` 配下の該当カテゴリ JSON に新規エントリが追加されます。
+            ポリマーは `polymer_db/polymers/uncategorized.json` に入るため、必要に応じて適切なカテゴリへ手動で移動してください。
             `polymer_db.js` は自動再生成済みです。
 
             Closes #${{ github.event.issue.number }}

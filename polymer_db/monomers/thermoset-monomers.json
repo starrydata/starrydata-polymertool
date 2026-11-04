@@ -1,0 +1,169 @@
+[
+  {
+    "key": "BMI",
+    "label": "BMI|Bismaleimide",
+    "displayName": "4,4'-bismaleimidodiphenylmethane (MDA-BMI)",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "Matrimid",
+      "Matrimid 5292",
+      "Compimide",
+      "F-655",
+      "BT resin",
+      "bismaleimide triazine",
+      "bismaleimide"
+    ],
+    "elements": [
+      {
+        "name": "MDA-BMI（反応前モノマー構造）",
+        "smiles": "O=C1C=CC(=O)N1c1ccc(Cc2ccc(N3C(=O)C=CC3=O)cc2)cc1",
+        "polyGroup": "maleimide",
+        "note": "⚠ 反応前モノマー構造。反応後はマレイミド二重結合が開環した構造に修正してください"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "4,4'-methylenedianiline (MDA)",
+        "smiles": "Nc1ccc(Cc2ccc(N)cc2)cc1",
+        "role": "diamine"
+      },
+      {
+        "name": "maleic anhydride",
+        "smiles": "O=C1OC(=O)C=C1",
+        "role": "anhydride"
+      }
+    ]
+  },
+  {
+    "key": "CE",
+    "label": "CE|Cyanate ester resin",
+    "displayName": "bisphenol A dicyanate (BADCy)",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "BADCy",
+      "Primaset",
+      "PT-30",
+      "PT-60",
+      "AroCy",
+      "AroCy B-10",
+      "AroCy L-10",
+      "Lonza PT",
+      "Cytec 5578",
+      "cyanate ester",
+      "polycyanurate",
+      "2,2-bis(4-cyanatophenyl)propane"
+    ],
+    "elements": [
+      {
+        "name": "bisphenol A dicyanate（反応前モノマー構造）",
+        "smiles": "N#COc1ccc(C(C)(C)c2ccc(OC#N)cc2)cc1",
+        "polyGroup": "cyanate ester",
+        "note": "⚠ 反応前モノマー構造。反応後はシアネート基3つが三量体化してトリアジン環を形成"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "bisphenol A",
+        "smiles": "Oc1ccc(C(C)(C)c2ccc(O)cc2)cc1",
+        "role": "bisphenol"
+      },
+      {
+        "name": "cyanogen bromide (BrCN)",
+        "smiles": "BrC#N",
+        "role": "cyanation agent"
+      }
+    ]
+  },
+  {
+    "key": "DABPA",
+    "label": "DABPA|Bisallyl bisphenol A",
+    "displayName": "O,O'-diallyl bisphenol A",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "bisallyl bisphenol A",
+      "diallyl bisphenol A",
+      "allyl bisphenol A",
+      "BABA",
+      "DABA"
+    ],
+    "elements": [
+      {
+        "name": "O,O'-diallyl bisphenol A（反応前モノマー構造）",
+        "smiles": "C=CCOc1ccc(C(C)(C)c2ccc(OCC=C)cc2)cc1",
+        "polyGroup": "allyl ether",
+        "note": "⚠ 反応前モノマー構造。CE・BMI 系の反応性共モノマー。2つのアリルエーテル基がBMIのマレイミドとen反応し架橋網目に取り込まれる"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "bisphenol A",
+        "smiles": "Oc1ccc(C(C)(C)c2ccc(O)cc2)cc1",
+        "role": "bisphenol"
+      },
+      {
+        "name": "allyl bromide",
+        "smiles": "C=CCBr",
+        "role": "alkyl halide"
+      }
+    ]
+  },
+  {
+    "key": "PBz",
+    "label": "PBz|Polybenzoxazine",
+    "displayName": "polybenzoxazine",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "benzoxazine",
+      "polybenzoxazine",
+      "BPA-a",
+      "Henkel benzoxazine"
+    ],
+    "elements": [
+      {
+        "name": "(ベンゾオキサジンの種類を確認して入力)",
+        "smiles": "",
+        "polyGroup": "benzoxazine",
+        "note": "⚠ 開環重合後の構造はモノマー(フェノール・アミン・ホルムアルデヒドの組み合わせ)によって異なる"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "bisphenol A",
+        "smiles": "Oc1ccc(C(C)(C)c2ccc(O)cc2)cc1",
+        "role": "phenol"
+      },
+      {
+        "name": "aniline",
+        "smiles": "Nc1ccccc1",
+        "role": "primary amine"
+      },
+      {
+        "name": "formaldehyde",
+        "smiles": "C=O",
+        "role": "aldehyde"
+      }
+    ]
+  },
+  {
+    "key": "BRCN",
+    "label": "BRCN|Cyanogen Bromide",
+    "displayName": "cyanogen bromide (BrCN)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "cyanogen bromide",
+      "BrCN",
+      "BRCN"
+    ],
+    "elements": [
+      {
+        "name": "cyanogen bromide",
+        "smiles": "BrC#N",
+        "polyGroup": "cyanation agent",
+        "note": "CE 樹脂（BADCy 等）合成のシアネート化剤"
+      }
+    ],
+    "monomers": []
+  }
+]

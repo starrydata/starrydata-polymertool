@@ -1,0 +1,46 @@
+[
+  {
+    "key": "BDO",
+    "label": "BDO|1,4-Butanediol",
+    "displayName": "1,4-butanediol",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "BDO",
+      "1,4-butanediol",
+      "tetramethylene glycol"
+    ],
+    "elements": [
+      {
+        "name": "1,4-butanediol",
+        "smiles": "OCCCCO",
+        "polyGroup": "diol",
+        "note": "PU・PBT 主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "EG",
+    "label": "EG|Ethylene Glycol",
+    "displayName": "ethylene glycol (1,2-ethanediol)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "EG",
+      "ethylene glycol",
+      "1,2-ethanediol",
+      "MEG",
+      "monoethylene glycol"
+    ],
+    "elements": [
+      {
+        "name": "ethylene glycol",
+        "smiles": "OCCO",
+        "polyGroup": "diol",
+        "note": "PET 主原料"
+      }
+    ],
+    "monomers": []
+  }
+]

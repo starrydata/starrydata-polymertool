@@ -1,0 +1,46 @@
+[
+  {
+    "key": "MDI",
+    "label": "MDI|4,4'-Methylenediphenyl Diisocyanate",
+    "displayName": "4,4'-methylenediphenyl diisocyanate",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "MDI",
+      "4,4'-methylenediphenyl diisocyanate",
+      "diphenylmethane diisocyanate"
+    ],
+    "elements": [
+      {
+        "name": "MDI",
+        "smiles": "O=C=Nc1ccc(Cc2ccc(N=C=O)cc2)cc1",
+        "polyGroup": "diisocyanate",
+        "note": "PU 主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "TDI",
+    "label": "TDI|Toluene Diisocyanate",
+    "displayName": "2,4-toluene diisocyanate",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "TDI",
+      "2,4-TDI",
+      "2,6-TDI",
+      "toluene diisocyanate",
+      "toluene-2,4-diisocyanate"
+    ],
+    "elements": [
+      {
+        "name": "2,4-TDI",
+        "smiles": "O=C=Nc1ccc(C)c(N=C=O)c1",
+        "polyGroup": "diisocyanate",
+        "note": "軟質PU主原料（2,4- / 2,6- 異性体混合が多い）"
+      }
+    ],
+    "monomers": []
+  }
+]

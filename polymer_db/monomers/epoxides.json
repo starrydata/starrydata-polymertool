@@ -1,0 +1,81 @@
+[
+  {
+    "key": "Epoxy",
+    "label": "Epoxy",
+    "displayName": "diglycidyl ether of bisphenol A (DGEBA)",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "DGEBA",
+      "Araldite",
+      "Epon",
+      "D.E.R.",
+      "jER",
+      "Epikote",
+      "YD-128",
+      "bisphenol A epoxy",
+      "BPA epoxy"
+    ],
+    "elements": [
+      {
+        "name": "DGEBA（反応前モノマー構造）",
+        "smiles": "C1OC1COc1ccc(C(C)(C)c2ccc(OCC3CO3)cc2)cc1",
+        "polyGroup": "epoxy",
+        "note": "⚠ 反応前モノマー構造（DGEBA）。硬化剤の種類・配合によって反応後の構造が変わる"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "bisphenol A",
+        "smiles": "Oc1ccc(C(C)(C)c2ccc(O)cc2)cc1",
+        "role": "bisphenol"
+      },
+      {
+        "name": "epichlorohydrin",
+        "smiles": "ClCC1CO1",
+        "role": "epoxide"
+      }
+    ]
+  },
+  {
+    "key": "EO",
+    "label": "EO|Ethylene Oxide",
+    "displayName": "ethylene oxide (oxirane)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "EO",
+      "ethylene oxide",
+      "oxirane"
+    ],
+    "elements": [
+      {
+        "name": "ethylene oxide",
+        "smiles": "C1CO1",
+        "polyGroup": "epoxide",
+        "note": "PEG/PEO 主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "ECH",
+    "label": "ECH|Epichlorohydrin",
+    "displayName": "epichlorohydrin",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "ECH",
+      "epichlorohydrin",
+      "1-chloro-2,3-epoxypropane"
+    ],
+    "elements": [
+      {
+        "name": "epichlorohydrin",
+        "smiles": "ClCC1CO1",
+        "polyGroup": "epoxide",
+        "note": "エポキシ樹脂・フェノキシ樹脂主原料"
+      }
+    ],
+    "monomers": []
+  }
+]

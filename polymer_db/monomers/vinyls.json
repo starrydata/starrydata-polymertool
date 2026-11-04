@@ -1,0 +1,310 @@
+[
+  {
+    "key": "BPVE",
+    "label": "BPVE|Bis(trifluorovinyloxy)biphenyl vinyl ether",
+    "displayName": "4,4'-bis(2-trifluorovinyloxy)biphenyl",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "trifluorovinyl ether",
+      "PFCB",
+      "perfluorocyclobutane"
+    ],
+    "elements": [
+      {
+        "name": "BPVE(反応前モノマー構造)",
+        "smiles": "FC(F)=C(F)Oc1ccc(-c2ccc(OC(F)=C(F)F)cc2)cc1",
+        "polyGroup": "trifluorovinyl ether",
+        "note": "⚠ 反応前モノマー構造。反応後はパーフルオロシクロブタン環([2+2]付加)を形成"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "4,4'-biphenol",
+        "smiles": "Oc1ccc(-c2ccc(O)cc2)cc1",
+        "role": "biphenol"
+      },
+      {
+        "name": "bromotrifluoroethylene (BTFE)",
+        "smiles": "FC(F)=C(F)Br",
+        "role": "trifluorovinyl source"
+      }
+    ]
+  },
+  {
+    "key": "STY",
+    "label": "STY|Styrene",
+    "displayName": "styrene",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "styrene",
+      "vinylbenzene",
+      "phenylethylene",
+      "STY"
+    ],
+    "elements": [
+      {
+        "name": "styrene",
+        "smiles": "C=Cc1ccccc1",
+        "polyGroup": "vinyl",
+        "note": "PS・SMA・ABS・SBR 主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "MMA",
+    "label": "MMA|Methyl Methacrylate",
+    "displayName": "methyl methacrylate",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "MMA",
+      "methyl methacrylate",
+      "methyl 2-methylpropenoate"
+    ],
+    "elements": [
+      {
+        "name": "MMA",
+        "smiles": "C=C(C)C(=O)OC",
+        "polyGroup": "vinyl",
+        "note": "PMMA 主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "AN",
+    "label": "AN|Acrylonitrile",
+    "displayName": "acrylonitrile (2-propenenitrile)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "acrylonitrile",
+      "AN",
+      "vinyl cyanide",
+      "2-propenenitrile"
+    ],
+    "elements": [
+      {
+        "name": "acrylonitrile",
+        "smiles": "C=CC#N",
+        "polyGroup": "vinyl",
+        "note": "ABS・SAN・PAN 主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "VCL",
+    "label": "VCL|Vinyl Chloride",
+    "displayName": "vinyl chloride",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "vinyl chloride",
+      "chloroethylene",
+      "VCM",
+      "VCL"
+    ],
+    "elements": [
+      {
+        "name": "vinyl chloride",
+        "smiles": "C=CCl",
+        "polyGroup": "vinyl",
+        "note": "PVC 主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "VDF",
+    "label": "VDF|Vinylidene Fluoride",
+    "displayName": "1,1-difluoroethylene (vinylidene fluoride)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "VDF",
+      "vinylidene fluoride",
+      "1,1-difluoroethylene",
+      "VF2"
+    ],
+    "elements": [
+      {
+        "name": "VDF",
+        "smiles": "C=C(F)F",
+        "polyGroup": "vinyl",
+        "note": "PVDF 主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "TFE",
+    "label": "TFE|Tetrafluoroethylene",
+    "displayName": "tetrafluoroethylene",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "TFE",
+      "tetrafluoroethylene",
+      "perfluoroethylene"
+    ],
+    "elements": [
+      {
+        "name": "TFE",
+        "smiles": "FC(F)=C(F)F",
+        "polyGroup": "vinyl",
+        "note": "PTFE・FEP・PFA 主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "ETH",
+    "label": "ETH|Ethylene",
+    "displayName": "ethylene (ethene)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "ethylene",
+      "ethene",
+      "ETH"
+    ],
+    "elements": [
+      {
+        "name": "ethylene",
+        "smiles": "C=C",
+        "polyGroup": "olefin",
+        "note": "PE・EVA・EPDM 主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "PRP",
+    "label": "PRP|Propylene",
+    "displayName": "propylene (propene)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "propylene",
+      "propene",
+      "PRP"
+    ],
+    "elements": [
+      {
+        "name": "propylene",
+        "smiles": "C=CC",
+        "polyGroup": "olefin",
+        "note": "PP・EPDM 主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "BD",
+    "label": "BD|1,3-Butadiene",
+    "displayName": "1,3-butadiene",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "1,3-butadiene",
+      "BD",
+      "butadiene"
+    ],
+    "elements": [
+      {
+        "name": "1,3-butadiene",
+        "smiles": "C=CC=C",
+        "polyGroup": "diene",
+        "note": "PB・SBS・SBR・ABS・NBR 主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "ISO",
+    "label": "ISO|Isoprene",
+    "displayName": "isoprene (2-methyl-1,3-butadiene)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "isoprene",
+      "2-methyl-1,3-butadiene",
+      "ISO"
+    ],
+    "elements": [
+      {
+        "name": "isoprene",
+        "smiles": "C=C(C)C=C",
+        "polyGroup": "diene",
+        "note": "IR・NR・SIS 主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "4MP",
+    "label": "4MP|4-Methyl-1-pentene",
+    "displayName": "4-methyl-1-pentene",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "4-methyl-1-pentene",
+      "4MP1P",
+      "4MP"
+    ],
+    "elements": [
+      {
+        "name": "4-methyl-1-pentene",
+        "smiles": "CC(C)CC=C",
+        "polyGroup": "olefin",
+        "note": "PMP (TPX) 主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "BTFE",
+    "label": "BTFE|Bromotrifluoroethylene",
+    "displayName": "bromotrifluoroethylene",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "BTFE",
+      "bromotrifluoroethylene",
+      "1-bromo-1,2,2-trifluoroethylene"
+    ],
+    "elements": [
+      {
+        "name": "BTFE",
+        "smiles": "FC(F)=C(F)Br",
+        "polyGroup": "fluoroolefin",
+        "note": "BPVE / PFCB 樹脂主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "MCL",
+    "label": "MCL|Methacryloyl Chloride",
+    "displayName": "methacryloyl chloride",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "methacryloyl chloride",
+      "MCL",
+      "2-methylacryloyl chloride"
+    ],
+    "elements": [
+      {
+        "name": "methacryloyl chloride",
+        "smiles": "CC(=C)C(=O)Cl",
+        "polyGroup": "acryloyl chloride",
+        "note": "SA9000 等の末端メタクリル化剤"
+      }
+    ],
+    "monomers": []
+  }
+]
