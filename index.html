@@ -1541,9 +1541,11 @@ function _saveGeminiCache(obj) {
   try { localStorage.setItem(_GEMINI_CACHE_KEY, JSON.stringify(obj)); } catch {}
 }
 
+let _geminiLastError = null;
+
 async function fetchGeminiPolymerCard(tok) {
   const key = localStorage.getItem(_GEMINI_KEY_KEY);
-  if (!key) return null;
+  if (!key) { _geminiLastError = 'Gemini キー未設定'; return null; }
 
   const cache = _loadGeminiCache();
   const cacheKey = tok.toLowerCase().trim();
@@ -1556,12 +1558,10 @@ async function fetchGeminiPolymerCard(tok) {
 
 出力 JSON スキーマ（JSON のみ、Markdown や説明不要）:
 {
-  "found": true,
   "key": "短縮記号（例: PET, Cellulose, PI）",
   "displayName": "正式英名または IUPAC 名",
-  "aliases": ["別名（カタカナ含む）", ...],
-  "defaultClass": "Homopolymer" または "Copolymer",
-  "isPolymer": true または false,
+  "aliases": ["別名（カタカナ含む）"],
+  "defaultClass": "Homopolymer",
   "elements": [
     {
       "name": "繰り返し単位の説明",
@@ -1571,20 +1571,19 @@ async function fetchGeminiPolymerCard(tok) {
     }
   ],
   "monomers": [
-    { "name": "モノマー名", "smiles": "化合物 SMILES（[$] なし）", "role": "役割（例: diol, diacid, diamine）" }
+    { "name": "モノマー名", "smiles": "化合物 SMILES（[$] なし）", "role": "役割" }
   ]
 }
 
 ルール:
-- 認識できない場合は {"found": false} のみを返す
 - 芳香環は小文字（c1ccccc1）
-- 立体化学は代表構造で可（必要なら @, / を使用）
+- 立体化学は代表構造で可
 - 共重合体は elements を複数エントリにする
-- monomers は推定可能なら含める、わからなければ省略
-- key は英数字とハイフンのみ、20 文字以内`;
+- key は英数字とハイフンのみ、20 文字以内
+- 認識できない場合も、推定で良いので可能な限り埋めること。どうしても推定不能のときのみ {"error": "unknown"} を返す`;
 
     const models = ['gemini-3.6-flash', 'gemini-2.0-flash'];
-    let text = null, lastErr = null;
+    let text = null, lastErr = null, rawData = null;
     for (const model of models) {
       try {
         const res = await fetch(
@@ -1598,22 +1597,35 @@ async function fetchGeminiPolymerCard(tok) {
             })
           }
         );
-        if (!res.ok) { lastErr = new Error(`Gemini ${res.status}`); continue; }
-        const data = await res.json();
-        text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) break;
-      } catch (e) { lastErr = e; }
+        if (!res.ok) {
+          const errBody = await res.text().catch(() => '');
+          lastErr = `Gemini ${res.status} (${model}): ${errBody.slice(0, 200)}`;
+          continue;
+        }
+        rawData = await res.json();
+        text = rawData?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) {
+          const finishReason = rawData?.candidates?.[0]?.finishReason || 'no-text';
+          lastErr = `Gemini (${model}): empty text (finishReason=${finishReason})`;
+          continue;
+        }
+        break;
+      } catch (e) { lastErr = `fetch error (${model}): ${e.message}`; }
     }
-    if (!text) { console.warn('Gemini name search failed:', lastErr); return null; }
+    if (!text) { _geminiLastError = lastErr || 'unknown'; console.warn('Gemini search failed:', lastErr, rawData); return null; }
 
     try {
       const cleaned = text.trim().replace(/^```(?:json)?\n?|\n?```$/g, '');
       parsed = JSON.parse(cleaned);
     } catch (e) {
-      console.warn('Gemini response parse error:', e, text);
+      _geminiLastError = 'JSON parse 失敗: ' + text.slice(0, 200);
+      console.warn('Gemini parse error:', e, text);
       return null;
     }
-    if (!parsed || parsed.found === false) return null;
+    if (!parsed || parsed.error) {
+      _geminiLastError = `Gemini が「${parsed?.error || 'unknown'}」と返答`;
+      return null;
+    }
 
     cache[cacheKey] = parsed;
     _saveGeminiCache(cache);
@@ -1623,8 +1635,12 @@ async function fetchGeminiPolymerCard(tok) {
     name: el.name || '', smiles: (el.smiles || '').trim(),
     polyGroup: el.polyGroup || '', note: el.note || ''
   })).filter(el => el.smiles);
-  if (!elements.length) return null;
+  if (!elements.length) {
+    _geminiLastError = 'Gemini が SMILES を返さなかった (elements 空)';
+    return null;
+  }
 
+  _geminiLastError = null;
   const id = ++_pubchemCacheId;
   const genKey = (parsed.key || tok).replace(/[^A-Za-z0-9\-]/g, '').slice(0, 20) || 'LLM';
   _pubchemCache.set(id, {
@@ -1743,9 +1759,11 @@ async function polymerSearch(q) {
   const extraHtml = extraCards.join('');
   const sepLabel = hasGemini ? '🤖 Gemini 推定結果（BigSMILES）' : 'PubChem 検索結果（化合物 SMILES）';
   const missLabel = hasGemini ? 'Gemini / PubChem いずれからも' : 'PubChem から';
+  const diag = (hasGemini && _geminiLastError)
+    ? `<div style="font-size:11px;color:var(--gray-500);margin-top:6px;word-break:break-all;">Gemini 失敗理由: ${esc(_geminiLastError)}</div>` : '';
   results.innerHTML = (html || '') + (extraHtml
     ? `<div class="psearch-section-sep">↓ ${sepLabel}</div>` + extraHtml
-    : `<div class="psearch-empty">${esc(missingTokens.join(', '))}：${missLabel}結果が得られませんでした。</div>`
+    : `<div class="psearch-empty">${esc(missingTokens.join(', '))}：${missLabel}結果が得られませんでした。${diag}</div>`
   );
 }
 
