@@ -1,0 +1,109 @@
+[
+  {
+    "key": "CPL",
+    "label": "CPL|Caprolactam",
+    "displayName": "ε-caprolactam",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "caprolactam",
+      "ε-caprolactam",
+      "CPL",
+      "CL",
+      "azepan-2-one"
+    ],
+    "elements": [
+      {
+        "name": "caprolactam",
+        "smiles": "O=C1CCCCCN1",
+        "polyGroup": "lactam",
+        "note": "PA6（Nylon 6）主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "LAC",
+    "label": "LAC|Lactide",
+    "displayName": "lactide (3,6-dimethyl-1,4-dioxane-2,5-dione)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "lactide",
+      "L-lactide",
+      "D,L-lactide",
+      "3,6-dimethyl-1,4-dioxane-2,5-dione"
+    ],
+    "elements": [
+      {
+        "name": "lactide",
+        "smiles": "CC1OC(=O)C(C)OC1=O",
+        "polyGroup": "cyclic ester",
+        "note": "PLA 主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "NBRN",
+    "label": "NBRN|Norbornene",
+    "displayName": "norbornene (bicyclo[2.2.1]hept-2-ene)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "norbornene",
+      "bicycloheptene",
+      "NBRN"
+    ],
+    "elements": [
+      {
+        "name": "norbornene",
+        "smiles": "C1CC2CC1C=C2",
+        "polyGroup": "cyclic olefin",
+        "note": "COC (Topas) 主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "TROX",
+    "label": "TROX|Trioxane",
+    "displayName": "1,3,5-trioxane",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "trioxane",
+      "1,3,5-trioxane",
+      "TROX"
+    ],
+    "elements": [
+      {
+        "name": "1,3,5-trioxane",
+        "smiles": "O1COCOC1",
+        "polyGroup": "cyclic ether",
+        "note": "POM（Delrin/Duracon 系）主原料"
+      }
+    ],
+    "monomers": []
+  },
+  {
+    "key": "D4",
+    "label": "D4|Octamethylcyclotetrasiloxane",
+    "displayName": "octamethylcyclotetrasiloxane (D4)",
+    "defaultClass": "Homopolymer",
+    "dropdownHidden": true,
+    "aliases": [
+      "D4",
+      "octamethylcyclotetrasiloxane"
+    ],
+    "elements": [
+      {
+        "name": "D4",
+        "smiles": "C[Si]1(C)O[Si](C)(C)O[Si](C)(C)O[Si](C)(C)O1",
+        "polyGroup": "cyclic siloxane",
+        "note": "PDMS 主原料（開環重合）"
+      }
+    ],
+    "monomers": []
+  }
+]

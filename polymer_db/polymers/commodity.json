@@ -1,0 +1,634 @@
+[
+  {
+    "key": "SMA",
+    "label": "SMA|Styrene-maleic anhydride copolymer",
+    "displayName": "styrene-maleic anhydride copolymer",
+    "defaultClass": "Copolymer",
+    "aliases": [
+      "Xiran",
+      "SMA resin",
+      "Dylark",
+      "styrene maleic anhydride"
+    ],
+    "elements": [
+      {
+        "name": "styrene unit",
+        "smiles": "[$]CC(c1ccccc1)[$]",
+        "polyGroup": "",
+        "note": ""
+      },
+      {
+        "name": "maleic anhydride unit",
+        "smiles": "[$]C1C([$])C(=O)OC1=O",
+        "polyGroup": "",
+        "note": "無水マレイン酸の繰り返し単位（環は保持）"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "styrene",
+        "smiles": "C=Cc1ccccc1",
+        "role": "vinyl monomer"
+      },
+      {
+        "name": "maleic anhydride",
+        "smiles": "O=C1OC(=O)C=C1",
+        "role": "anhydride comonomer"
+      }
+    ]
+  },
+  {
+    "key": "PB",
+    "label": "PB|Polybutadiene",
+    "displayName": "polybutadiene (1,4-)",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "Ricon",
+      "Ricon 100",
+      "Ricon 153",
+      "Ricon 154",
+      "Ricon 181",
+      "Buna CB",
+      "BR",
+      "butadiene rubber"
+    ],
+    "elements": [
+      {
+        "name": "1,4-butadiene unit",
+        "smiles": "[$]CC=CC[$]",
+        "polyGroup": "",
+        "note": "cis/trans混合を想定。純cis: [$]C/C=C\\C[$]、純trans: [$]C/C=C/C[$]"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "1,3-butadiene",
+        "smiles": "C=CC=C",
+        "role": "diene"
+      }
+    ]
+  },
+  {
+    "key": "PS",
+    "label": "PS|Polystyrene",
+    "displayName": "polystyrene",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "GPPS",
+      "Styron",
+      "Styropor",
+      "polystyrene"
+    ],
+    "elements": [
+      {
+        "name": "styrene unit",
+        "smiles": "[$]CC(c1ccccc1)[$]",
+        "polyGroup": "",
+        "note": ""
+      }
+    ],
+    "monomers": [
+      {
+        "name": "styrene",
+        "smiles": "C=Cc1ccccc1",
+        "role": "vinyl monomer"
+      }
+    ]
+  },
+  {
+    "key": "Acrylic",
+    "label": "Acrylic polymer",
+    "displayName": "poly(methyl methacrylate) (PMMA)",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "PMMA",
+      "Plexiglas",
+      "Perspex",
+      "Lucite",
+      "Delpet",
+      "Acrylite",
+      "poly(methyl methacrylate)",
+      "polymethyl methacrylate"
+    ],
+    "elements": [
+      {
+        "name": "methyl methacrylate unit",
+        "smiles": "[$]CC(C)(C(=O)OC)[$]",
+        "polyGroup": "",
+        "note": "⚠ PMMaを例示。アクリル系は種類が多い(PGMA等)。実際の化学構造を確認して修正してください"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "methyl methacrylate (MMA)",
+        "smiles": "C=C(C)C(=O)OC",
+        "role": "vinyl monomer"
+      }
+    ]
+  },
+  {
+    "key": "PBE",
+    "label": "PBE|Propylene-based elastomer",
+    "displayName": "ethylene-propylene rubber (EPR)",
+    "defaultClass": "Copolymer",
+    "aliases": [
+      "EPR",
+      "EPDM",
+      "Vistalon",
+      "Royalene",
+      "Keltan",
+      "Nordel",
+      "Engage",
+      "ethylene propylene rubber"
+    ],
+    "elements": [
+      {
+        "name": "ethylene unit",
+        "smiles": "[$]CC[$]",
+        "polyGroup": "",
+        "note": ""
+      },
+      {
+        "name": "propylene unit",
+        "smiles": "[$]CC(C)[$]",
+        "polyGroup": "",
+        "note": "EPR(エチレン-プロピレンゴム)の例。比率は論文記載値で入力"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "ethylene",
+        "smiles": "C=C",
+        "role": "olefin"
+      },
+      {
+        "name": "propylene",
+        "smiles": "C=CC",
+        "role": "olefin"
+      }
+    ]
+  },
+  {
+    "key": "PET",
+    "label": "PET|Poly(ethylene terephthalate)",
+    "displayName": "poly(ethylene terephthalate)",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "PET",
+      "Mylar",
+      "Melinex",
+      "Rynite",
+      "Dacron",
+      "Tetoron",
+      "Estar",
+      "Eastalene",
+      "polyester",
+      "polyethylene terephthalate"
+    ],
+    "elements": [
+      {
+        "name": "ethylene terephthalate unit",
+        "smiles": "[$]OCCOC(=O)c1ccc(C(=O)[$])cc1",
+        "polyGroup": "",
+        "note": "EG + TPA/DMT より縮合重合"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "ethylene glycol",
+        "smiles": "OCCO",
+        "role": "diol"
+      },
+      {
+        "name": "terephthalic acid",
+        "smiles": "OC(=O)c1ccc(C(=O)O)cc1",
+        "role": "diacid"
+      }
+    ]
+  },
+  {
+    "key": "PBT",
+    "label": "PBT|Poly(butylene terephthalate)",
+    "displayName": "poly(butylene terephthalate)",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "PBT",
+      "Valox",
+      "Crastin",
+      "Toraycon",
+      "Ultradur",
+      "Pocan",
+      "Duranex",
+      "poly(1,4-butylene terephthalate)"
+    ],
+    "elements": [
+      {
+        "name": "butylene terephthalate unit",
+        "smiles": "[$]OCCCCOC(=O)c1ccc(C(=O)[$])cc1",
+        "polyGroup": "",
+        "note": "BDO + TPA/DMT より縮合重合"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "1,4-butanediol",
+        "smiles": "OCCCCO",
+        "role": "diol"
+      },
+      {
+        "name": "terephthalic acid",
+        "smiles": "OC(=O)c1ccc(C(=O)O)cc1",
+        "role": "diacid"
+      }
+    ]
+  },
+  {
+    "key": "PC",
+    "label": "PC|Polycarbonate (BPA-PC)",
+    "displayName": "poly(bisphenol A carbonate)",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "PC",
+      "polycarbonate",
+      "Lexan",
+      "Makrolon",
+      "Panlite",
+      "Iupilon",
+      "Tarflon",
+      "Calibre",
+      "Sabic PC"
+    ],
+    "elements": [
+      {
+        "name": "bisphenol A carbonate unit",
+        "smiles": "[$]Oc1ccc(C(C)(C)c2ccc(OC(=O)[$])cc2)cc1",
+        "polyGroup": "",
+        "note": "BPA + phosgene（界面法）または BPA + DPC（溶融法）で合成"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "bisphenol A",
+        "smiles": "Oc1ccc(C(C)(C)c2ccc(O)cc2)cc1",
+        "role": "bisphenol"
+      },
+      {
+        "name": "phosgene",
+        "smiles": "O=C(Cl)Cl",
+        "role": "carbonyl chloride"
+      },
+      {
+        "name": "diphenyl carbonate (溶融法代替)",
+        "smiles": "O=C(Oc1ccccc1)Oc1ccccc1",
+        "role": "carbonate"
+      }
+    ]
+  },
+  {
+    "key": "PA6",
+    "label": "PA6|Polyamide 6 (Nylon 6)",
+    "displayName": "polycaprolactam (Nylon 6)",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "PA6",
+      "Nylon 6",
+      "polycaprolactam",
+      "Ultramid B",
+      "Amilan",
+      "Zytel PA6",
+      "Akulon",
+      "Grivory",
+      "Toraymag"
+    ],
+    "elements": [
+      {
+        "name": "ε-caprolactam repeat unit",
+        "smiles": "[$]NCCCCCC(=O)[$]",
+        "polyGroup": "",
+        "note": "caprolactam 開環重合で合成"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "ε-caprolactam",
+        "smiles": "O=C1CCCCCN1",
+        "role": "lactam"
+      }
+    ]
+  },
+  {
+    "key": "PA66",
+    "label": "PA66|Polyamide 66 (Nylon 66)",
+    "displayName": "poly(hexamethylene adipamide) (Nylon 66)",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "PA66",
+      "Nylon 66",
+      "Zytel",
+      "Ultramid A",
+      "Vydyne",
+      "Radipol",
+      "Toray Amilan CM",
+      "Leona"
+    ],
+    "elements": [
+      {
+        "name": "hexamethylene adipamide unit",
+        "smiles": "[$]NCCCCCCNC(=O)CCCCC(=O)[$]",
+        "polyGroup": "",
+        "note": "HMDA + adipic acid 縮合"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "hexamethylenediamine (HMDA)",
+        "smiles": "NCCCCCCN",
+        "role": "diamine"
+      },
+      {
+        "name": "adipic acid",
+        "smiles": "OC(=O)CCCCC(=O)O",
+        "role": "diacid"
+      }
+    ]
+  },
+  {
+    "key": "POM",
+    "label": "POM|Polyoxymethylene (Acetal)",
+    "displayName": "polyoxymethylene / polyacetal",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "POM",
+      "polyacetal",
+      "Delrin",
+      "Duracon",
+      "Iupital",
+      "Ultraform",
+      "Celcon",
+      "Hostaform",
+      "acetal"
+    ],
+    "elements": [
+      {
+        "name": "oxymethylene unit",
+        "smiles": "[$]OC[$]",
+        "polyGroup": "",
+        "note": "trioxane / formaldehyde より合成。エステル / エーテル末端でキャップ"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "formaldehyde",
+        "smiles": "C=O",
+        "role": "aldehyde"
+      },
+      {
+        "name": "1,3,5-trioxane (三量体)",
+        "smiles": "O1COCOC1",
+        "role": "cyclic ether"
+      }
+    ]
+  },
+  {
+    "key": "ABS",
+    "label": "ABS|Acrylonitrile-Butadiene-Styrene",
+    "displayName": "acrylonitrile-butadiene-styrene copolymer",
+    "defaultClass": "Copolymer",
+    "aliases": [
+      "ABS",
+      "Cycolac",
+      "Terluran",
+      "Novodur",
+      "Magnum",
+      "Toyolac",
+      "Kralastic",
+      "Diapet"
+    ],
+    "elements": [
+      {
+        "name": "acrylonitrile unit",
+        "smiles": "[$]CC(C#N)[$]",
+        "polyGroup": "",
+        "note": "ニトリル基寄与で剛性・耐薬品性"
+      },
+      {
+        "name": "butadiene unit",
+        "smiles": "[$]CC=CC[$]",
+        "polyGroup": "",
+        "note": "ゴム相ドメイン、耐衝撃性を付与"
+      },
+      {
+        "name": "styrene unit",
+        "smiles": "[$]CC(c1ccccc1)[$]",
+        "polyGroup": "",
+        "note": "剛性・成形性・光沢を付与"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "acrylonitrile",
+        "smiles": "C=CC#N",
+        "role": "vinyl"
+      },
+      {
+        "name": "1,3-butadiene",
+        "smiles": "C=CC=C",
+        "role": "diene"
+      },
+      {
+        "name": "styrene",
+        "smiles": "C=Cc1ccccc1",
+        "role": "vinyl"
+      }
+    ]
+  },
+  {
+    "key": "PVC",
+    "label": "PVC|Poly(vinyl chloride)",
+    "displayName": "poly(vinyl chloride)",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "PVC",
+      "polyvinyl chloride",
+      "Geon",
+      "Vinnol",
+      "Marvinol",
+      "Solvin",
+      "Vestolit",
+      "poly(chloroethylene)"
+    ],
+    "elements": [
+      {
+        "name": "vinyl chloride unit",
+        "smiles": "[$]CC(Cl)[$]",
+        "polyGroup": "",
+        "note": "ラジカル重合で合成"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "vinyl chloride",
+        "smiles": "C=CCl",
+        "role": "vinyl"
+      }
+    ]
+  },
+  {
+    "key": "PLA",
+    "label": "PLA|Poly(lactic acid)",
+    "displayName": "poly(lactic acid)",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "PLA",
+      "polylactide",
+      "Ingeo",
+      "Luminy",
+      "Terramac",
+      "polylactic acid"
+    ],
+    "elements": [
+      {
+        "name": "lactic acid unit",
+        "smiles": "[$]OC(C)C(=O)[$]",
+        "polyGroup": "",
+        "note": "L-lactide 開環重合が主流。生分解性"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "L-lactide",
+        "smiles": "CC1OC(=O)C(C)OC1=O",
+        "role": "cyclic ester"
+      },
+      {
+        "name": "L-lactic acid (代替)",
+        "smiles": "CC(O)C(=O)O",
+        "role": "hydroxyacid"
+      }
+    ]
+  },
+  {
+    "key": "SBS",
+    "label": "SBS|Styrene-Butadiene-Styrene (Kraton)",
+    "displayName": "styrene-butadiene-styrene triblock copolymer",
+    "defaultClass": "Copolymer",
+    "aliases": [
+      "SBS",
+      "Kraton",
+      "Septon",
+      "Tuftec",
+      "Solprene",
+      "Finaprene",
+      "styrene butadiene styrene",
+      "thermoplastic elastomer"
+    ],
+    "elements": [
+      {
+        "name": "styrene unit",
+        "smiles": "[$]CC(c1ccccc1)[$]",
+        "polyGroup": "",
+        "note": "末端ハードブロック"
+      },
+      {
+        "name": "butadiene unit",
+        "smiles": "[$]CC=CC[$]",
+        "polyGroup": "",
+        "note": "中央ソフトブロック（水添で SEBS）"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "styrene",
+        "smiles": "C=Cc1ccccc1",
+        "role": "vinyl"
+      },
+      {
+        "name": "1,3-butadiene",
+        "smiles": "C=CC=C",
+        "role": "diene"
+      }
+    ]
+  },
+  {
+    "key": "SBR",
+    "label": "SBR|Styrene-Butadiene Rubber",
+    "displayName": "styrene-butadiene rubber",
+    "defaultClass": "Copolymer",
+    "aliases": [
+      "SBR",
+      "Buna S",
+      "Nipol",
+      "styrene butadiene rubber",
+      "GRS",
+      "SB rubber"
+    ],
+    "elements": [
+      {
+        "name": "styrene unit",
+        "smiles": "[$]CC(c1ccccc1)[$]",
+        "polyGroup": "",
+        "note": "通常20〜25 wt%"
+      },
+      {
+        "name": "butadiene unit",
+        "smiles": "[$]CC=CC[$]",
+        "polyGroup": "",
+        "note": "cis/trans/1,2- 混合"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "styrene",
+        "smiles": "C=Cc1ccccc1",
+        "role": "vinyl"
+      },
+      {
+        "name": "1,3-butadiene",
+        "smiles": "C=CC=C",
+        "role": "diene"
+      }
+    ]
+  },
+  {
+    "key": "NBR",
+    "label": "NBR|Nitrile Rubber",
+    "displayName": "acrylonitrile-butadiene rubber",
+    "defaultClass": "Copolymer",
+    "aliases": [
+      "NBR",
+      "nitrile rubber",
+      "Nipol NBR",
+      "Krynac",
+      "Perbunan",
+      "Chemigum",
+      "acrylonitrile-butadiene rubber",
+      "Buna N"
+    ],
+    "elements": [
+      {
+        "name": "acrylonitrile unit",
+        "smiles": "[$]CC(C#N)[$]",
+        "polyGroup": "",
+        "note": "AN 比率で耐油性・低温柔軟性トレードオフ"
+      },
+      {
+        "name": "butadiene unit",
+        "smiles": "[$]CC=CC[$]",
+        "polyGroup": "",
+        "note": ""
+      }
+    ],
+    "monomers": [
+      {
+        "name": "acrylonitrile",
+        "smiles": "C=CC#N",
+        "role": "vinyl"
+      },
+      {
+        "name": "1,3-butadiene",
+        "smiles": "C=CC=C",
+        "role": "diene"
+      }
+    ]
+  }
+]

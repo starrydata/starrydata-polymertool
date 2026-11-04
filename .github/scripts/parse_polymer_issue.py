@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Issue Form 本文から polymer_db.json エントリを組み立てて追記する。
+"""Issue Form 本文から polymer_db/ の分割 JSON に新規エントリを追記する。
 
 環境変数:
   ISSUE_BODY   Issue Form の Markdown 本文
@@ -13,6 +13,11 @@ Issue Form のフィールドは以下の Markdown 見出し形式で来る:
   PSU|Polysulfone
 
 複数行フィールドはコードブロック（```json ... ```）で囲まれる。
+
+カテゴリ判定:
+- 要素 SMILES に `[$]` を含む → ポリマー → polymer_db/polymers/uncategorized.json
+  （カテゴリは後でメンテナが手動で適切な *.json へ移動）
+- それ以外 → モノマー → polyGroup から polymer_db/monomers/<category>.json を推定
 """
 import json
 import os
@@ -21,11 +26,34 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-JSON_PATH = ROOT / "polymer_db.json"
+DB_DIR = ROOT / "polymer_db"
+
+# polyGroup → monomers サブカテゴリ名
+PG_TO_MONO_CAT = {
+    "diamine": "diamines", "amine": "diamines", "diaminodiol": "diamines",
+    "bisphenol": "bisphenols", "biphenol": "bisphenols",
+    "phenol": "bisphenols", "thiophenol": "bisphenols",
+    "dianhydride": "dianhydrides", "anhydride": "dianhydrides",
+    "diaryl halide": "diaryl-halides", "acid chloride": "diaryl-halides",
+    "carbonyl chloride": "diaryl-halides",
+    "diacid": "diacids", "hydroxyacid": "diacids",
+    "diol": "diols",
+    "ethylene oxide": "cyclic-monomers", "cyclic ether": "cyclic-monomers",
+    "cyclic ester": "cyclic-monomers", "lactam": "cyclic-monomers",
+    "cyclic olefin": "cyclic-monomers", "cyclic siloxane": "cyclic-monomers",
+    "epoxide": "epoxides", "epoxy": "epoxides",
+    "diisocyanate": "diisocyanates",
+    "vinyl": "vinyls", "olefin": "vinyls", "diene": "vinyls",
+    "methacrylate": "vinyls", "trifluorovinyl ether": "vinyls",
+    "fluoroolefin": "vinyls", "acryloyl chloride": "vinyls",
+    "maleimide": "thermoset-monomers", "cyanate ester": "thermoset-monomers",
+    "benzoxazine": "thermoset-monomers", "allyl ether": "thermoset-monomers",
+    "cyanation agent": "thermoset-monomers",
+    "aldehyde": "others", "alkyl halide": "others", "carbonate": "others",
+}
 
 
 def parse_issue_body(body: str) -> dict[str, str]:
-    """### <field> の見出しで区切って dict にする。"""
     sections: dict[str, str] = {}
     current: str | None = None
     buf: list[str] = []
@@ -44,7 +72,6 @@ def parse_issue_body(body: str) -> dict[str, str]:
 
 
 def strip_code_fence(text: str) -> str:
-    """```json ... ``` の外側を除去。"""
     m = re.match(r"^```(?:\w+)?\n(.*?)\n```\s*$", text, re.DOTALL)
     return m.group(1) if m else text
 
@@ -54,12 +81,33 @@ def parse_bool_checkbox(text: str) -> bool:
 
 
 def find_by_label(sections: dict[str, str], *needles: str) -> str:
-    """見出しに含まれる文字列で緩く照合する（絵文字や括弧付きに対応）。"""
     for heading, value in sections.items():
         low = heading.lower()
         if all(n.lower() in low for n in needles):
             return value.strip()
     return ""
+
+
+def all_existing_keys() -> set[str]:
+    keys: set[str] = set()
+    for path in DB_DIR.rglob("*.json"):
+        for e in json.loads(path.read_text(encoding="utf-8")):
+            if "key" in e:
+                keys.add(e["key"])
+    return keys
+
+
+def target_file(new_entry: dict) -> Path:
+    """new_entry を書き込むべき JSON ファイルを決める。"""
+    elements = new_entry.get("elements", [])
+    is_polymer = any("[$]" in (el.get("smiles", "") or "") for el in elements)
+    if is_polymer:
+        return DB_DIR / "polymers" / "uncategorized.json"
+    for el in elements:
+        pg = (el.get("polyGroup") or "").strip()
+        if pg in PG_TO_MONO_CAT:
+            return DB_DIR / "monomers" / f"{PG_TO_MONO_CAT[pg]}.json"
+    return DB_DIR / "monomers" / "others.json"
 
 
 def main() -> int:
@@ -86,9 +134,9 @@ def main() -> int:
         print("::error::label is required", file=sys.stderr)
         return 1
 
-    entries = json.loads(JSON_PATH.read_text(encoding="utf-8"))
-    if any(e.get("key") == key for e in entries):
-        print(f"::error::key '{key}' already exists in polymer_db.json", file=sys.stderr)
+    existing = all_existing_keys()
+    if key in existing:
+        print(f"::error::key '{key}' already exists in polymer_db/", file=sys.stderr)
         return 1
 
     aliases = []
@@ -144,25 +192,23 @@ def main() -> int:
     if parse_bool_checkbox(dropdown_hidden_text):
         new_entry["dropdownHidden"] = True
 
-    # Other / Crosslinker sentinel の直前に挿入
-    sentinel_start = next(
-        (i for i, e in enumerate(entries) if e.get("sentinel")),
-        len(entries),
-    )
-    entries.insert(sentinel_start, new_entry)
-
-    JSON_PATH.write_text(
+    path = target_file(new_entry)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    entries = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+    entries.append(new_entry)
+    path.write_text(
         json.dumps(entries, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    print(f"added key='{key}' at index {sentinel_start}")
+    rel = path.relative_to(ROOT)
+    print(f"added key='{key}' to {rel}")
 
-    # 後続ステップ用に出力
     gh_output = os.environ.get("GITHUB_OUTPUT")
     if gh_output:
         with open(gh_output, "a", encoding="utf-8") as f:
             f.write(f"polymer_key={key}\n")
             f.write(f"polymer_label={label}\n")
+            f.write(f"target_file={rel}\n")
     return 0
 
 

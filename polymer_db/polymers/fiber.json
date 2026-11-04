@@ -1,0 +1,70 @@
+[
+  {
+    "key": "Kevlar",
+    "label": "Kevlar|Poly(p-phenylene terephthalamide)",
+    "displayName": "poly(p-phenylene terephthalamide) [p-aramid]",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "Kevlar",
+      "Twaron",
+      "Technora",
+      "p-aramid",
+      "PPTA",
+      "para-aramid",
+      "aramid fiber"
+    ],
+    "elements": [
+      {
+        "name": "p-phenylene terephthalamide unit",
+        "smiles": "[$]Nc1ccc(NC(=O)c2ccc(C(=O)[$])cc2)cc1",
+        "polyGroup": "",
+        "note": "p-PDA + TPC 界面/溶液重合で合成"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "p-phenylenediamine (PPD)",
+        "smiles": "Nc1ccc(N)cc1",
+        "role": "diamine"
+      },
+      {
+        "name": "terephthaloyl chloride (TPC)",
+        "smiles": "O=C(Cl)c1ccc(C(=O)Cl)cc1",
+        "role": "acid chloride"
+      }
+    ]
+  },
+  {
+    "key": "Nomex",
+    "label": "Nomex|Poly(m-phenylene isophthalamide)",
+    "displayName": "poly(m-phenylene isophthalamide) [m-aramid]",
+    "defaultClass": "Homopolymer",
+    "aliases": [
+      "Nomex",
+      "Teijinconex",
+      "m-aramid",
+      "MPIA",
+      "meta-aramid"
+    ],
+    "elements": [
+      {
+        "name": "m-phenylene isophthalamide unit",
+        "smiles": "[$]Nc1cccc(NC(=O)c2cccc(C(=O)[$])c2)c1",
+        "polyGroup": "",
+        "note": "m-PDA + IPC 界面/溶液重合で合成"
+      }
+    ],
+    "monomers": [
+      {
+        "name": "m-phenylenediamine (MPD)",
+        "smiles": "Nc1cccc(N)c1",
+        "role": "diamine"
+      },
+      {
+        "name": "isophthaloyl chloride (IPC)",
+        "smiles": "O=C(Cl)c1cccc(C(=O)Cl)c1",
+        "role": "acid chloride"
+      }
+    ]
+  }
+]
