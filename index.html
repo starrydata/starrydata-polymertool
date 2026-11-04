@@ -1582,7 +1582,7 @@ async function fetchGeminiPolymerCard(tok) {
 - key は英数字とハイフンのみ、20 文字以内
 - 認識できない場合も、推定で良いので可能な限り埋めること。どうしても推定不能のときのみ {"error": "unknown"} を返す`;
 
-    const models = ['gemini-3.6-flash', 'gemini-2.0-flash'];
+    const models = ['gemini-3.8-flash', 'gemini-3.6-flash'];
     let text = null, lastErr = null, rawData = null;
     for (const model of models) {
       try {
@@ -1929,7 +1929,7 @@ Rules:
 - If the structure is ambiguous, output your best interpretation` }
     ]}]});
     // モデル + リトライ（503/429 は指数バックオフで最大3回、2.0-flash にフォールバック）
-    const models = ['gemini-3.6-flash', 'gemini-2.0-flash'];
+    const models = ['gemini-3.8-flash', 'gemini-3.6-flash'];
     let lastErr = null;
     for (const model of models) {
       for (let attempt = 0; attempt < 3; attempt++) {
@@ -2106,7 +2106,7 @@ Rules:
 
 Example output: [{"name":"bisphenol A","smiles":"Oc1ccc(C(C)(C)c2ccc(O)cc2)cc1","role":"bisphenol"},{"name":"4,4'-dichlorodiphenyl sulfone","smiles":"Clc1ccc(S(=O)(=O)c2ccc(Cl)cc2)cc1","role":"diaryl halide"}]`;
 
-    const models = ['gemini-3.6-flash', 'gemini-2.0-flash'];
+    const models = ['gemini-3.8-flash', 'gemini-3.6-flash'];
     const body = JSON.stringify({ contents: [{ parts: [{ text: prompt }]}]});
     let res, lastStatus;
     outer: for (const model of models) {
