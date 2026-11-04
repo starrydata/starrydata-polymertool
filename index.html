@@ -1699,8 +1699,12 @@ function addFromPubChem(id) {
 
 function looksLikeSmiles(s) {
   if (s.length < 5) return false;
-  const special = (s.match(/[()\[\]=#+\-@\/\\cnosp]/g) || []).length;
-  return special >= 3 && !s.includes(' ');
+  if (s.includes(' ')) return false;
+  if (/[　-鿿゠-ヿ぀-ゟ]/.test(s)) return false;
+  const strong = (s.match(/[\[\]()=#@\/\\]/g) || []).length;
+  if (strong >= 2) return true;
+  if (strong >= 1 && /[A-Z]/.test(s) && /\d/.test(s)) return true;
+  return false;
 }
 
 async function polymerSearch(q) {
