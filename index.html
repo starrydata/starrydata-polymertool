@@ -60,7 +60,85 @@ body {
 }
 
 /* ─── Layout ─── */
-.main { max-width: 900px; margin: 0 auto; padding: 20px 16px 60px; }
+.main { max-width: 1600px; margin: 0 auto; padding: 20px 16px 60px; }
+.workspace-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+@media (max-width: 1100px) {
+  .workspace-grid { grid-template-columns: 1fr; }
+}
+.paper-panel {
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.paper-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: var(--gray-700);
+}
+.pdf-dropzone {
+  border: 2px dashed #c4b5fd;
+  border-radius: 10px;
+  padding: 24px 16px;
+  text-align: center;
+  color: #6d28d9;
+  background: #faf5ff;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  font-size: 13px;
+}
+.pdf-dropzone:hover,
+.pdf-dropzone.drag-over {
+  background: #f3e8ff;
+  border-color: #7c3aed;
+}
+.pdf-dropzone .pdf-sub {
+  font-size: 11px;
+  color: var(--gray-400);
+  margin-top: 4px;
+}
+.paper-meta {
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--gray-700);
+  line-height: 1.5;
+}
+.paper-meta .pm-title { font-weight: 700; margin-bottom: 4px; color: var(--gray-800); }
+.paper-meta .pm-sub { color: var(--gray-500); font-size: 11px; }
+.paper-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  font-size: 12px;
+}
+.paper-item + .paper-item { margin-top: 4px; }
+.paper-item .pi-kind {
+  font-size: 10px; font-weight: 700;
+  padding: 2px 7px; border-radius: 8px;
+  flex-shrink: 0;
+}
+.paper-item .pi-kind.poly { background: #7c3aed; color: #fff; }
+.paper-item .pi-kind.mono { background: #0284c7; color: #fff; }
+.paper-item .pi-name { flex: 1; color: var(--gray-700); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.paper-item .pi-smi { font-family: var(--mono); font-size: 10.5px; color: var(--gray-500); max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pdf-status { font-size: 12px; color: var(--gray-500); padding: 4px 2px; }
+.pdf-status.error { color: var(--red); }
 
 /* ─── Card ─── */
 .card {
@@ -818,7 +896,28 @@ pre.json-pre {
     </div>
   </div>
 
-  <!-- ポリマー検索パネル -->
+  <!-- 2 カラム: 左=論文収集 / 右=ポリマー検索 -->
+  <div class="workspace-grid">
+
+  <!-- 左カラム: 論文解析 -->
+  <div class="paper-panel" id="paper-panel">
+    <div class="paper-panel-header">📄 論文 PDF から収集</div>
+    <div class="pdf-dropzone" id="pdf-dropzone"
+      onclick="document.getElementById('pdfInput').click()"
+      ondragover="event.preventDefault();this.classList.add('drag-over')"
+      ondragleave="this.classList.remove('drag-over')"
+      ondrop="handlePdfDrop(event)">
+      <div><b>PDF をドロップ</b>、またはクリックして選択</div>
+      <div class="pdf-sub">最大 20MB · Gemini でポリマー / モノマーを抽出し、右の検索欄にカード表示</div>
+    </div>
+    <input type="file" id="pdfInput" accept="application/pdf" style="display:none"
+      onchange="handlePdfFile(this.files[0])">
+    <div id="pdf-status" class="pdf-status"></div>
+    <div id="pdf-meta"></div>
+    <div id="pdf-items"></div>
+  </div>
+
+  <!-- 右カラム: ポリマー検索パネル -->
   <div class="psearch-panel" id="psearch-panel"
     ondragover="event.preventDefault();this.classList.add('drag-over')"
     ondragleave="this.classList.remove('drag-over')"
@@ -855,6 +954,9 @@ pre.json-pre {
     <div id="psearch-img-preview"></div>
     <div id="psearch-results"></div>
   </div>
+
+  </div>
+  <!-- /workspace-grid -->
 
   <div id="componentsContainer"></div>
 
@@ -1871,6 +1973,223 @@ function updateHFStatus() {
   const h = document.getElementById('hf-token-status');
   if (g) { const v = localStorage.getItem(_GEMINI_KEY_KEY); g.className = v ? 'hf-status-ok' : 'hf-status-none'; g.textContent = v ? '✓ 設定済' : '未設定'; }
   if (h) { const v = localStorage.getItem(_HF_TOKEN_KEY);   h.className = v ? 'hf-status-ok' : 'hf-status-none'; h.textContent = v ? '✓ 設定済' : '未設定'; }
+}
+
+// =============================================
+// 論文 PDF からポリマー・モノマー抽出 (Gemini)
+// =============================================
+const _PDF_MAX_BYTES = 20 * 1024 * 1024;
+
+function handlePdfDrop(e) {
+  e.preventDefault();
+  document.getElementById('pdf-dropzone').classList.remove('drag-over');
+  const file = [...(e.dataTransfer.files || [])].find(f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
+  if (file) handlePdfFile(file);
+}
+
+function _setPdfStatus(msg, isError) {
+  const el = document.getElementById('pdf-status');
+  if (!el) return;
+  el.textContent = msg || '';
+  el.className = 'pdf-status' + (isError ? ' error' : '');
+}
+
+async function handlePdfFile(file) {
+  if (!file) return;
+  if (file.size > _PDF_MAX_BYTES) {
+    _setPdfStatus(`❌ ファイルサイズが大きすぎます (${(file.size/1024/1024).toFixed(1)}MB > 20MB)`, true);
+    return;
+  }
+  const key = localStorage.getItem(_GEMINI_KEY_KEY);
+  if (!key) {
+    _setPdfStatus('❌ Gemini API キー未設定。⚙ から登録してください', true);
+    return;
+  }
+  _setPdfStatus(`📖 PDF 読込中… (${(file.size/1024/1024).toFixed(1)}MB)`);
+  document.getElementById('pdf-meta').innerHTML = '';
+  document.getElementById('pdf-items').innerHTML = '';
+
+  const base64 = await _fileToBase64(file);
+  _setPdfStatus('🤖 Gemini でポリマー / モノマー抽出中… (数十秒かかります)');
+  try {
+    const parsed = await analyzePdfWithGemini(base64, key);
+    _renderPaperAnalysis(parsed, file.name);
+  } catch (e) {
+    _setPdfStatus(`❌ 抽出失敗: ${e.message || e}`, true);
+  }
+}
+
+function _fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result.split(',')[1]);
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+}
+
+async function analyzePdfWithGemini(base64, key) {
+  const prompt = `あなたは高分子化学の専門家です。添付された論文 PDF を全文確認し、記載されているポリマーおよびモノマーを可能な限り抽出してください。
+
+出力は以下の JSON スキーマに厳密に従ってください（Markdown や説明は不要）:
+
+{
+  "paperInfo": {
+    "title": "論文タイトル",
+    "authors": ["著者名"],
+    "doi": "10.xxxx/xxxx または null",
+    "journal": "ジャーナル名 または null",
+    "year": 2024
+  },
+  "polymers": [
+    {
+      "name": "正式名 (英語)",
+      "abbreviation": "略称（なければ空文字）",
+      "displayName": "正式英名",
+      "repeatUnitSmiles": "BigSMILES の繰り返し単位。[$] で結合点を示す。共重合体の場合は elements の形で複数",
+      "elements": [
+        { "name": "部品名", "smiles": "[$]...[$]", "polyGroup": "ester/amide/ether/vinyl/glycoside など", "note": "" }
+      ],
+      "defaultClass": "Homopolymer or Copolymer",
+      "monomers": [
+        { "name": "モノマー名", "smiles": "化合物 SMILES ([$] なし)", "role": "diamine/bisphenol/vinyl など" }
+      ],
+      "context": "論文中の該当記述を 1-2 文で要約"
+    }
+  ],
+  "monomers": [
+    { "name": "モノマー名", "smiles": "化合物 SMILES ([$] なし)", "role": "役割" }
+  ]
+}
+
+ルール:
+- 芳香環は小文字 (c1ccccc1)
+- 立体化学は代表構造で可
+- 認識できないポリマー・モノマーは含めない
+- 同じ物質が繰り返し登場する場合は 1 エントリにまとめる
+- key は後で付与するので空でよい
+- 不明なフィールドは空文字または null`;
+
+  const models = ['gemini-3.8-flash', 'gemini-3.6-flash'];
+  const body = JSON.stringify({
+    contents: [{ parts: [
+      { inline_data: { mime_type: 'application/pdf', data: base64 } },
+      { text: prompt }
+    ]}],
+    generationConfig: { responseMimeType: 'application/json' }
+  });
+
+  let text = null, lastErr = null;
+  outer: for (const model of models) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${key}`,
+          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }
+        );
+        if (res.status === 503 || res.status === 429) {
+          const wait = 2000 * Math.pow(2, attempt);
+          lastErr = `${res.status} (${model}, ${attempt+1}/3) — ${wait/1000}秒待機`;
+          _setPdfStatus(`🤖 ${lastErr}`);
+          if (attempt < 2) { await new Promise(r => setTimeout(r, wait)); continue; }
+          continue outer;
+        }
+        if (!res.ok) {
+          const errBody = await res.text().catch(() => '');
+          lastErr = `Gemini ${res.status} (${model}): ${errBody.slice(0,200)}`;
+          continue outer;
+        }
+        const data = await res.json();
+        text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) break outer;
+        lastErr = `Gemini (${model}): empty response`;
+        continue outer;
+      } catch (e) { lastErr = `fetch error (${model}): ${e.message}`; continue outer; }
+    }
+  }
+  if (!text) throw new Error(lastErr || 'Gemini unreachable');
+  const cleaned = text.trim().replace(/^```(?:json)?\n?|\n?```$/g, '');
+  return JSON.parse(cleaned);
+}
+
+function _renderPaperAnalysis(parsed, filename) {
+  const metaEl = document.getElementById('pdf-meta');
+  const itemsEl = document.getElementById('pdf-items');
+  const info = parsed.paperInfo || {};
+  const polymers = Array.isArray(parsed.polymers) ? parsed.polymers : [];
+  const monomers = Array.isArray(parsed.monomers) ? parsed.monomers : [];
+
+  metaEl.innerHTML = `
+    <div class="paper-meta">
+      <div class="pm-title">${esc(info.title || filename)}</div>
+      <div class="pm-sub">
+        ${info.authors?.length ? esc(info.authors.slice(0,3).join(', ')) + (info.authors.length > 3 ? ' et al.' : '') : ''}
+        ${info.journal ? ` · ${esc(info.journal)}` : ''}
+        ${info.year ? ` (${esc(String(info.year))})` : ''}
+        ${info.doi ? ` · <a href="https://doi.org/${encodeURIComponent(info.doi)}" target="_blank" rel="noopener" style="color:#2563eb;">${esc(info.doi)}</a>` : ''}
+      </div>
+    </div>`;
+
+  const cards = [];
+  const items = [];
+  for (const p of polymers) {
+    const elements = (p.elements && p.elements.length ? p.elements : [{
+      name: p.name || '', smiles: p.repeatUnitSmiles || '', polyGroup: p.polyGroup || '', note: p.context || ''
+    }]).filter(e => (e.smiles || '').trim());
+    if (!elements.length) continue;
+    const key = (p.abbreviation || p.name || 'POLY').replace(/[^A-Za-z0-9\-]/g, '').slice(0, 20) || 'POLY';
+    const id = ++_pubchemCacheId;
+    _pubchemCache.set(id, {
+      key, label: `${key}|${p.displayName || p.name || ''}`,
+      displayName: p.displayName || p.name || '',
+      defaultClass: p.defaultClass || (elements.length >= 2 ? 'Copolymer' : 'Homopolymer'),
+      aliases: p.abbreviation && p.abbreviation !== p.name ? [p.name].filter(Boolean) : [],
+      source: 'llm',
+      elements,
+      monomers: (p.monomers || []).filter(m => m && m.smiles).map(m => ({
+        name: m.name || '', smiles: m.smiles, role: m.role || ''
+      }))
+    });
+    cards.push(renderGeminiResultCard(id, key, p.displayName || p.name || key));
+    items.push(`
+      <div class="paper-item">
+        <span class="pi-kind poly">POLY</span>
+        <span class="pi-name" title="${esc(p.displayName || p.name || '')}">${esc(p.abbreviation || p.name || key)}</span>
+        <span class="pi-smi" title="${esc(elements[0].smiles)}">${esc(elements[0].smiles)}</span>
+      </div>`);
+  }
+  for (const m of monomers) {
+    if (!m || !m.smiles) continue;
+    const key = (m.name || 'MONO').split(/[\s(]/)[0].replace(/[^A-Za-z0-9\-]/g, '').toUpperCase().slice(0, 20) || 'MONO';
+    const id = ++_pubchemCacheId;
+    _pubchemCache.set(id, {
+      key, label: `${key}|${m.name || ''}`,
+      displayName: m.name || '', defaultClass: 'Homopolymer',
+      aliases: [], source: 'llm',
+      elements: [{ name: m.name || '', smiles: m.smiles, polyGroup: m.role || '', note: '論文から抽出' }],
+      monomers: []
+    });
+    cards.push(renderGeminiResultCard(id, key, m.name || key));
+    items.push(`
+      <div class="paper-item">
+        <span class="pi-kind mono">MONO</span>
+        <span class="pi-name" title="${esc(m.name || '')}">${esc(m.name || key)}</span>
+        <span class="pi-smi" title="${esc(m.smiles)}">${esc(m.smiles)}</span>
+      </div>`);
+  }
+
+  itemsEl.innerHTML = items.length
+    ? `<div style="font-size:11px;color:var(--gray-500);margin:4px 2px;">検出: ${polymers.length} ポリマー / ${monomers.length} モノマー</div>` + items.join('')
+    : '<div style="font-size:12px;color:var(--gray-400);padding:8px 0;">ポリマー / モノマーは見つかりませんでした。</div>';
+
+  const results = document.getElementById('psearch-results');
+  if (cards.length) {
+    ++_searchSeq;
+    results.innerHTML =
+      `<div class="psearch-section-sep">📄 「${esc(info.title || filename).slice(0, 60)}」 から抽出</div>`
+      + cards.join('');
+  }
+  _setPdfStatus(`✓ 完了: ${polymers.length} ポリマー / ${monomers.length} モノマーを右に表示`);
 }
 
 // =============================================
