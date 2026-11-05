@@ -1862,7 +1862,17 @@ function _extractImageFromClipboardEvent(e) {
   return null;
 }
 
+function _isEditableTarget(el) {
+  if (!el) return false;
+  const tag = el.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return true;
+  if (el.isContentEditable) return true;
+  return false;
+}
 function _onPaste(e) {
+  // input / textarea にフォーカスがある時はテキスト貼り付けを優先し、
+  // クリップボード内の画像には触らない（ユーザが意図せず画像認識を起動するのを防ぐ）
+  if (_isEditableTarget(document.activeElement) || _isEditableTarget(e.target)) return;
   const file = _extractImageFromClipboardEvent(e);
   if (file) {
     e.preventDefault();
