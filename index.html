@@ -821,8 +821,8 @@ pre.json-pre {
       <input type="text" id="psearch-input" name="polymer-query-no-autofill" autocomplete="off"
         autocorrect="off" autocapitalize="off" spellcheck="false"
         placeholder="略称・名称を入力、または構造式画像をドロップ / 貼り付け"
-        oninput="polymerSearch(this.value)"
-        onkeydown="if(event.key==='Escape')clearPolymerSearch()">
+        oninput="debouncedPolymerSearch(this.value)"
+        onkeydown="if(event.key==='Escape')clearPolymerSearch();else if(event.key==='Enter'){event.preventDefault();polymerSearch(this.value);}">
       <button class="psearch-img-btn" onclick="document.getElementById('imgSearchInput').click()" title="構造式画像から検索（DECIMER）">🖼</button>
       <button class="psearch-img-btn" onclick="pasteFromClipboard()" title="クリップボードから画像を貼り付け">📋</button>
       <button class="psearch-img-btn" onclick="toggleHFSettings()" title="HuggingFace API 設定" id="hf-gear-btn">⚙</button>
@@ -1707,7 +1707,20 @@ function looksLikeSmiles(s) {
   return false;
 }
 
+let _searchDebounceTimer = null;
+function debouncedPolymerSearch(q) {
+  clearTimeout(_searchDebounceTimer);
+  const trimmed = (q || '').trim();
+  if (!trimmed) {
+    ++_searchSeq;
+    document.getElementById('psearch-results').innerHTML = '';
+    return;
+  }
+  _searchDebounceTimer = setTimeout(() => polymerSearch(q), 500);
+}
+
 async function polymerSearch(q) {
+  clearTimeout(_searchDebounceTimer);
   const results = document.getElementById('psearch-results');
   q = (q || '').trim();
   if (!q) { results.innerHTML = ''; return; }
