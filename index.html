@@ -137,6 +137,44 @@ body {
 .paper-item .pi-kind.mono { background: #0284c7; color: #fff; }
 .paper-item .pi-name { flex: 1; color: var(--gray-700); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .paper-item .pi-smi { font-family: var(--mono); font-size: 10.5px; color: var(--gray-500); max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.paper-item-wrap {
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+.paper-item-wrap .paper-item {
+  border: none;
+  border-radius: 0;
+  margin-top: 0;
+  cursor: pointer;
+  background: #fff;
+}
+.paper-item-wrap .paper-item:hover { background: #f8fafc; }
+.paper-synth {
+  padding: 8px 12px 10px;
+  font-size: 11.5px;
+  color: var(--gray-700);
+  background: #f5f3ff;
+  border-top: 1px solid #ddd6fe;
+  display: none;
+  line-height: 1.6;
+}
+.paper-item-wrap.open .paper-synth { display: block; }
+.paper-synth-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+.paper-synth-label {
+  flex-shrink: 0;
+  min-width: 70px;
+  font-weight: 700;
+  color: #6d28d9;
+}
+.paper-synth-val { color: var(--gray-700); word-break: break-word; }
+.paper-synth-proc { margin-top: 6px; padding-top: 6px; border-top: 1px dashed #ddd6fe; }
 .pdf-status { font-size: 12px; color: var(--gray-500); padding: 4px 2px; }
 .pdf-status.error { color: var(--red); }
 
@@ -2054,6 +2092,19 @@ async function analyzePdfWithGemini(base64, key) {
       "monomers": [
         { "name": "モノマー名", "smiles": "化合物 SMILES ([$] なし)", "role": "diamine/bisphenol/vinyl など" }
       ],
+      "synthesis": {
+        "method": "重合法 (例: solution polycondensation / radical / ROP / interfacial / melt / bulk / emulsion / ATRP)",
+        "temperature": "温度条件 (例: 160°C, 室温, 80 → 200°C 段階昇温)",
+        "time": "反応時間 (例: 4 h, overnight, 24 h)",
+        "solvent": "溶媒 (例: NMP, DMSO, 無溶媒)",
+        "catalyst": "触媒・開始剤・塩基 (例: K2CO3, BPO, Sn(Oct)2)",
+        "atmosphere": "雰囲気 (例: N2, Ar, air)",
+        "procedure": "手順を 1-3 文で要約",
+        "workup": "後処理・精製 (例: 水中に沈殿 → メタノール洗浄 → 真空乾燥)",
+        "yield": "収率 (例: 85%, N/A)",
+        "molecularWeight": "分子量 (例: Mn=25000, Mw=50000 g/mol, PDI=1.8)"
+      },
+      "characterization": "物性・特性評価 (Tg, 熱分解温度, 誘電率, etc. 複数ある場合は ; 区切り)",
       "context": "論文中の該当記述を 1-2 文で要約"
     }
   ],
@@ -2112,6 +2163,60 @@ async function analyzePdfWithGemini(base64, key) {
   return JSON.parse(cleaned);
 }
 
+const _SYNTH_FIELDS = [
+  ['method',          '重合法'],
+  ['temperature',     '温度'],
+  ['time',            '時間'],
+  ['solvent',         '溶媒'],
+  ['catalyst',        '触媒/開始剤'],
+  ['atmosphere',      '雰囲気'],
+  ['yield',           '収率'],
+  ['molecularWeight', '分子量'],
+  ['workup',          '後処理'],
+];
+
+function _renderSynthesisBlock(synthesis, characterization, context) {
+  if (!synthesis && !characterization && !context) return '';
+  const rows = [];
+  if (synthesis && typeof synthesis === 'object') {
+    for (const [k, label] of _SYNTH_FIELDS) {
+      const v = synthesis[k];
+      if (v && String(v).trim() && String(v).toLowerCase() !== 'null' && String(v).toLowerCase() !== 'n/a') {
+        rows.push(`<div class="paper-synth-row"><span class="paper-synth-label">${label}</span><span class="paper-synth-val">${esc(String(v))}</span></div>`);
+      }
+    }
+    if (synthesis.procedure && String(synthesis.procedure).trim()) {
+      rows.push(`<div class="paper-synth-proc"><span class="paper-synth-label" style="min-width:auto;">手順</span><div class="paper-synth-val" style="margin-top:2px;">${esc(String(synthesis.procedure))}</div></div>`);
+    }
+  }
+  if (characterization && String(characterization).trim()) {
+    rows.push(`<div class="paper-synth-row"><span class="paper-synth-label">物性</span><span class="paper-synth-val">${esc(String(characterization))}</span></div>`);
+  }
+  if (context && String(context).trim()) {
+    rows.push(`<div class="paper-synth-proc"><span class="paper-synth-label" style="min-width:auto;">出典文脈</span><div class="paper-synth-val" style="margin-top:2px;color:var(--gray-500);font-style:italic;">${esc(String(context))}</div></div>`);
+  }
+  if (!rows.length) return '';
+  return `<div class="paper-synth">${rows.join('')}</div>`;
+}
+
+function _formatSynthesisPlain(synthesis, characterization, context) {
+  const parts = [];
+  if (synthesis && typeof synthesis === 'object') {
+    for (const [k, label] of _SYNTH_FIELDS) {
+      const v = synthesis[k];
+      if (v && String(v).trim() && String(v).toLowerCase() !== 'null' && String(v).toLowerCase() !== 'n/a') {
+        parts.push(`${label}: ${String(v).trim()}`);
+      }
+    }
+    if (synthesis.procedure && String(synthesis.procedure).trim()) {
+      parts.push(`手順: ${String(synthesis.procedure).trim()}`);
+    }
+  }
+  if (characterization && String(characterization).trim()) parts.push(`物性: ${String(characterization).trim()}`);
+  if (context && String(context).trim()) parts.push(`文脈: ${String(context).trim()}`);
+  return parts.join(' / ');
+}
+
 function _renderPaperAnalysis(parsed, filename) {
   const metaEl = document.getElementById('pdf-meta');
   const itemsEl = document.getElementById('pdf-items');
@@ -2138,6 +2243,10 @@ function _renderPaperAnalysis(parsed, filename) {
     }]).filter(e => (e.smiles || '').trim());
     if (!elements.length) continue;
     const key = (p.abbreviation || p.name || 'POLY').replace(/[^A-Za-z0-9\-]/g, '').slice(0, 20) || 'POLY';
+    const synthNote = _formatSynthesisPlain(p.synthesis, p.characterization, p.context);
+    if (synthNote) {
+      elements[0] = { ...elements[0], note: [elements[0].note, synthNote].filter(Boolean).join(' ｜ ') };
+    }
     const id = ++_pubchemCacheId;
     _pubchemCache.set(id, {
       key, label: `${key}|${p.displayName || p.name || ''}`,
@@ -2151,11 +2260,15 @@ function _renderPaperAnalysis(parsed, filename) {
       }))
     });
     cards.push(renderGeminiResultCard(id, key, p.displayName || p.name || key));
+    const synthHtml = _renderSynthesisBlock(p.synthesis, p.characterization, p.context);
     items.push(`
-      <div class="paper-item">
-        <span class="pi-kind poly">POLY</span>
-        <span class="pi-name" title="${esc(p.displayName || p.name || '')}">${esc(p.abbreviation || p.name || key)}</span>
-        <span class="pi-smi" title="${esc(elements[0].smiles)}">${esc(elements[0].smiles)}</span>
+      <div class="paper-item-wrap${synthHtml ? '' : ''}">
+        <div class="paper-item" onclick="${synthHtml ? "this.parentElement.classList.toggle('open')" : ''}">
+          <span class="pi-kind poly">POLY</span>
+          <span class="pi-name" title="${esc(p.displayName || p.name || '')}">${esc(p.abbreviation || p.name || key)}${synthHtml ? ' ▾' : ''}</span>
+          <span class="pi-smi" title="${esc(elements[0].smiles)}">${esc(elements[0].smiles)}</span>
+        </div>
+        ${synthHtml}
       </div>`);
   }
   for (const m of monomers) {
@@ -2171,10 +2284,12 @@ function _renderPaperAnalysis(parsed, filename) {
     });
     cards.push(renderGeminiResultCard(id, key, m.name || key));
     items.push(`
-      <div class="paper-item">
-        <span class="pi-kind mono">MONO</span>
-        <span class="pi-name" title="${esc(m.name || '')}">${esc(m.name || key)}</span>
-        <span class="pi-smi" title="${esc(m.smiles)}">${esc(m.smiles)}</span>
+      <div class="paper-item-wrap">
+        <div class="paper-item">
+          <span class="pi-kind mono">MONO</span>
+          <span class="pi-name" title="${esc(m.name || '')}">${esc(m.name || key)}</span>
+          <span class="pi-smi" title="${esc(m.smiles)}">${esc(m.smiles)}</span>
+        </div>
       </div>`);
   }
 
