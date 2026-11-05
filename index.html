@@ -818,10 +818,10 @@ pre.json-pre {
     ondrop="handleImageDrop(event)">
     <div class="psearch-bar">
       <span class="psearch-label">🔍 ポリマー名検索</span>
-      <input type="text" id="psearch-input" name="polymer-query-no-autofill" autocomplete="off"
+      <input type="search" id="psearch-input" name="polymer-query-no-autofill" autocomplete="off"
         autocorrect="off" autocapitalize="off" spellcheck="false"
-        placeholder="略称・名称を入力、または構造式画像をドロップ / 貼り付け"
-        oninput="debouncedPolymerSearch(this.value)"
+        placeholder="略称・名称を入力して Enter → 検索 (画像はドロップ / 貼り付け)"
+        oninput="onSearchInput(this.value)"
         onkeydown="if(event.key==='Escape')clearPolymerSearch();else if(event.key==='Enter'){event.preventDefault();polymerSearch(this.value);}">
       <button class="psearch-img-btn" onclick="document.getElementById('imgSearchInput').click()" title="構造式画像から検索（DECIMER）">🖼</button>
       <button class="psearch-img-btn" onclick="pasteFromClipboard()" title="クリップボードから画像を貼り付け">📋</button>
@@ -1707,20 +1707,14 @@ function looksLikeSmiles(s) {
   return false;
 }
 
-let _searchDebounceTimer = null;
-function debouncedPolymerSearch(q) {
-  clearTimeout(_searchDebounceTimer);
-  const trimmed = (q || '').trim();
-  if (!trimmed) {
+function onSearchInput(q) {
+  if (!(q || '').trim()) {
     ++_searchSeq;
     document.getElementById('psearch-results').innerHTML = '';
-    return;
   }
-  _searchDebounceTimer = setTimeout(() => polymerSearch(q), 500);
 }
 
 async function polymerSearch(q) {
-  clearTimeout(_searchDebounceTimer);
   const results = document.getElementById('psearch-results');
   q = (q || '').trim();
   if (!q) { results.innerHTML = ''; return; }
@@ -2594,11 +2588,17 @@ function clearAll() {
 loadCustomDB();
 addComponent();
 setTimeout(updateHFStatus, 0);
-// ブラウザオートフィル対策（複数タイミングで上書き）
-[50, 200, 800].forEach(ms => setTimeout(() => {
+// ブラウザオートフィル対策: 複数タイミング + pageshow で確実に空にする
+function _clearSearchAutofill() {
   const el = document.getElementById('psearch-input');
-  if (el && el.value) el.value = '';
-}, ms));
+  if (el && el.value) {
+    el.value = '';
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+}
+[0, 50, 150, 400, 800, 1500, 3000].forEach(ms => setTimeout(_clearSearchAutofill, ms));
+window.addEventListener('pageshow', _clearSearchAutofill);
+window.addEventListener('load', _clearSearchAutofill);
 
 </script>
 </body>
