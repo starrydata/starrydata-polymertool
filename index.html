@@ -175,6 +175,56 @@ body {
 }
 .paper-synth-val { color: var(--gray-700); word-break: break-word; }
 .paper-synth-proc { margin-top: 6px; padding-top: 6px; border-top: 1px dashed #ddd6fe; }
+.sample-card {
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  margin-top: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+.sample-card-header {
+  padding: 8px 12px;
+  background: #eef2ff;
+  border-bottom: 1px solid #c7d2fe;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+.sample-card-header .sc-name { font-weight: 700; color: #3730a3; }
+.sample-card-header .sc-mtype {
+  font-size: 10.5px; font-weight: 600;
+  background: #c7d2fe; color: #3730a3;
+  padding: 1px 7px; border-radius: 8px;
+}
+.sample-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.sample-table th,
+.sample-table td {
+  border-bottom: 1px solid var(--gray-200);
+  padding: 4px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.sample-table th { background: #f8fafc; color: var(--gray-600); font-weight: 700; font-size: 10.5px; }
+.sample-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.sample-table .st-kind {
+  font-size: 10px; font-weight: 700;
+  padding: 1px 6px; border-radius: 6px;
+}
+.sample-table .st-kind.comp { background: #dbeafe; color: #1e40af; }
+.sample-table .st-kind.add  { background: #fef3c7; color: #92400e; }
+.sample-section-label {
+  font-size: 11px; font-weight: 700; color: var(--gray-500);
+  padding: 6px 12px 2px; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.sample-synth-toggle {
+  padding: 6px 12px; font-size: 11px; color: #6d28d9; cursor: pointer;
+  border-top: 1px dashed var(--gray-200); background: #faf5ff;
+  user-select: none;
+}
+.sample-synth-toggle:hover { background: #f3e8ff; }
+.sample-card .paper-synth { display: none; }
+.sample-card.open .paper-synth { display: block; }
 .pdf-status { font-size: 12px; color: var(--gray-500); padding: 4px 2px; }
 .pdf-status.error { color: var(--red); }
 
@@ -2067,7 +2117,9 @@ function _fileToBase64(file) {
 }
 
 async function analyzePdfWithGemini(base64, key) {
-  const prompt = `あなたは高分子化学の専門家です。添付された論文 PDF を全文確認し、記載されているポリマーおよびモノマーを可能な限り抽出してください。
+  const prompt = `あなたは高分子化学データベースの登録担当です。添付された論文 PDF を全文確認し、記載された「試料 (sample)」単位で組成・配合情報・合成条件を抽出してください。
+
+論文には通常、複数の試料 (例: PI-1, PI-2, blend-A ...) があり、各試料は 1 つ以上の component (主成分ポリマー) と 0 個以上の additive (開始剤・難燃剤・フィラー等) で構成されます。
 
 出力は以下の JSON スキーマに厳密に従ってください（Markdown や説明は不要）:
 
@@ -2079,47 +2131,75 @@ async function analyzePdfWithGemini(base64, key) {
     "journal": "ジャーナル名 または null",
     "year": 2024
   },
-  "polymers": [
+  "samples": [
     {
-      "name": "正式名 (英語)",
-      "abbreviation": "略称（なければ空文字）",
-      "displayName": "正式英名",
-      "repeatUnitSmiles": "BigSMILES の繰り返し単位。[$] で結合点を示す。共重合体の場合は elements の形で複数",
-      "elements": [
-        { "name": "部品名", "smiles": "[$]...[$]", "polyGroup": "ester/amide/ether/vinyl/glycoside など", "note": "" }
+      "sampleName": "論文中の試料名 (例: PI-1, PI-ODA, Sample A)",
+      "materialType": "Neat resin | Compound | Composite",
+      "compositionClass": "Homopolymer | Copolymer | Blend",
+      "components": [
+        {
+          "polymerDropdown": "Starrydata2 の component dropdown に対応する略号 (PPE / BMI / CE / Phenoxy resin / Epoxy / PI / SMA / PB / PS / BPVE / Acrylic polymer / PBz / PBE / PBO / PU / PO / Fluoropolymer / LCP / Other) — 不明なら Other",
+          "name": "ポリマー正式名",
+          "abbreviation": "略称",
+          "mw": "数平均分子量 Mn (g/mol、数値のみ) または null",
+          "mwType": "Mn / Mw / Mv (指定なければ空文字)",
+          "weightRatio": "重量比 (数値のみ、合計 100 でなくても可) または null",
+          "molarRatio": "モル比 (数値のみ) または null",
+          "commercialName": "商品名 (例: Udel, Kapton) または空文字",
+          "homopolymerType": "Homopolymer | Copolymer | Block | Graft",
+          "elements": [
+            {
+              "name": "繰り返し単位名",
+              "smiles": "BigSMILES。[$] で結合点を示す",
+              "polymerizableGroup": "重合官能基 (例: imide, ester, ether, vinyl, maleimide)",
+              "mw": "繰り返し単位分子量 or null",
+              "molecularVolume": "分子体積 cm3/mol or null",
+              "weightRatio": "この繰り返し単位の重量比 (共重合体用) or null",
+              "molarRatio": "モル比 (共重合体用) or null"
+            }
+          ],
+          "monomers": [
+            { "name": "モノマー名", "smiles": "化合物 SMILES ([$] なし)", "role": "diamine/bisphenol/vinyl など" }
+          ]
+        }
       ],
-      "defaultClass": "Homopolymer or Copolymer",
-      "monomers": [
-        { "name": "モノマー名", "smiles": "化合物 SMILES ([$] なし)", "role": "diamine/bisphenol/vinyl など" }
+      "additives": [
+        {
+          "additiveType": "Initiator | Flame retardant | Dispersant | Surfactant | Filler | Bubble/Void | Other",
+          "name": "添加剤名",
+          "commercialName": "商品名",
+          "smiles": "化合物 SMILES",
+          "mw": "分子量 or null",
+          "molecularVolume": "分子体積 cm3/mol or null",
+          "weightRatio": "重量比 or null",
+          "molarRatio": "モル比 or null"
+        }
       ],
       "synthesis": {
-        "method": "重合法 (例: solution polycondensation / radical / ROP / interfacial / melt / bulk / emulsion / ATRP)",
-        "temperature": "温度条件 (例: 160°C, 室温, 80 → 200°C 段階昇温)",
-        "time": "反応時間 (例: 4 h, overnight, 24 h)",
-        "solvent": "溶媒 (例: NMP, DMSO, 無溶媒)",
-        "catalyst": "触媒・開始剤・塩基 (例: K2CO3, BPO, Sn(Oct)2)",
-        "atmosphere": "雰囲気 (例: N2, Ar, air)",
+        "method": "重合法 (solution polycondensation / radical / ROP / interfacial / melt / bulk / emulsion / ATRP など)",
+        "temperature": "温度条件",
+        "time": "反応時間",
+        "solvent": "溶媒",
+        "catalyst": "触媒・開始剤・塩基",
+        "atmosphere": "N2 / Ar / air",
         "procedure": "手順を 1-3 文で要約",
-        "workup": "後処理・精製 (例: 水中に沈殿 → メタノール洗浄 → 真空乾燥)",
-        "yield": "収率 (例: 85%, N/A)",
-        "molecularWeight": "分子量 (例: Mn=25000, Mw=50000 g/mol, PDI=1.8)"
+        "workup": "後処理・精製",
+        "yield": "収率",
+        "achievedMw": "実測分子量 (Mn=25000 等)"
       },
-      "characterization": "物性・特性評価 (Tg, 熱分解温度, 誘電率, etc. 複数ある場合は ; 区切り)",
-      "context": "論文中の該当記述を 1-2 文で要約"
+      "properties": "測定された物性 (Tg, Td5, 誘電率, 弾性率 etc. ; 区切り)"
     }
-  ],
-  "monomers": [
-    { "name": "モノマー名", "smiles": "化合物 SMILES ([$] なし)", "role": "役割" }
   ]
 }
 
 ルール:
-- 芳香環は小文字 (c1ccccc1)
-- 立体化学は代表構造で可
-- 認識できないポリマー・モノマーは含めない
-- 同じ物質が繰り返し登場する場合は 1 エントリにまとめる
-- key は後で付与するので空でよい
-- 不明なフィールドは空文字または null`;
+- 試料ごとに 1 エントリ。論文の表 (Table 1 等) と本文を照合して正確な値を取ること
+- 芳香環は小文字 (c1ccccc1)、立体化学は代表構造で可
+- 無機フィラーや空孔のみの系は収集対象外
+- Data Type は Experimental のみ (Reference / Calculation は除外)
+- 不明なフィールドは空文字または null (推測で埋めない)
+- weightRatio / molarRatio は論文記載の数値をそのまま (単位 % や相対値)
+- polymerDropdown は上記リストから最も近いものを選び、該当なしは "Other"`;
 
   const models = ['gemini-3.8-flash', 'gemini-3.6-flash'];
   const body = JSON.stringify({
@@ -2217,12 +2297,92 @@ function _formatSynthesisPlain(synthesis, characterization, context) {
   return parts.join(' / ');
 }
 
+function _num(v) {
+  if (v === null || v === undefined || v === '') return '';
+  const s = String(v).trim();
+  if (!s || /^(null|n\/a|-)$/i.test(s)) return '';
+  return s;
+}
+
+function _renderSampleCard(sample, idx) {
+  const name = esc(sample.sampleName || `Sample ${idx + 1}`);
+  const mtype = esc(sample.materialType || '');
+  const cls = esc(sample.compositionClass || '');
+  const comps = (sample.components || []).filter(c => c && (c.name || c.polymerDropdown));
+  const adds = (sample.additives || []).filter(a => a && a.name);
+
+  let compRows = '';
+  for (const c of comps) {
+    const label = c.polymerDropdown && c.polymerDropdown !== 'Other' ? c.polymerDropdown : (c.abbreviation || c.name || '?');
+    compRows += `
+      <tr>
+        <td><span class="st-kind comp">${esc(label).split('|')[0]}</span></td>
+        <td title="${esc(c.name || '')}">${esc(c.name || '')}${c.commercialName ? `<br><span style="font-size:10px;color:var(--gray-400);">(${esc(c.commercialName)})</span>` : ''}</td>
+        <td>${esc(c.homopolymerType || '')}</td>
+        <td class="num">${esc(_num(c.mw))}${c.mwType ? `<br><span style="font-size:10px;color:var(--gray-400);">${esc(c.mwType)}</span>` : ''}</td>
+        <td class="num">${esc(_num(c.weightRatio))}</td>
+        <td class="num">${esc(_num(c.molarRatio))}</td>
+      </tr>`;
+    for (const el of (c.elements || [])) {
+      if (!el || !(el.smiles || el.name)) continue;
+      compRows += `
+        <tr style="background:#f8fafc;">
+          <td style="padding-left:20px;font-size:10px;color:var(--gray-400);">└ element</td>
+          <td style="font-size:10.5px;">${esc(el.name || '')}${el.polymerizableGroup ? `<br><span style="font-size:10px;color:#92400e;">PG: ${esc(el.polymerizableGroup)}</span>` : ''}${el.smiles ? `<br><span style="font-family:var(--mono);font-size:10px;color:var(--gray-500);word-break:break-all;">${esc(el.smiles)}</span>` : ''}</td>
+          <td></td>
+          <td class="num">${esc(_num(el.mw))}${el.molecularVolume ? `<br><span style="font-size:10px;color:var(--gray-400);">V=${esc(_num(el.molecularVolume))}</span>` : ''}</td>
+          <td class="num">${esc(_num(el.weightRatio))}</td>
+          <td class="num">${esc(_num(el.molarRatio))}</td>
+        </tr>`;
+    }
+  }
+
+  let addRows = '';
+  for (const a of adds) {
+    addRows += `
+      <tr>
+        <td><span class="st-kind add">${esc(a.additiveType || 'Other')}</span></td>
+        <td>${esc(a.name)}${a.commercialName ? `<br><span style="font-size:10px;color:var(--gray-400);">(${esc(a.commercialName)})</span>` : ''}${a.smiles ? `<br><span style="font-family:var(--mono);font-size:10px;color:var(--gray-500);word-break:break-all;">${esc(a.smiles)}</span>` : ''}</td>
+        <td></td>
+        <td class="num">${esc(_num(a.mw))}${a.molecularVolume ? `<br><span style="font-size:10px;color:var(--gray-400);">V=${esc(_num(a.molecularVolume))}</span>` : ''}</td>
+        <td class="num">${esc(_num(a.weightRatio))}</td>
+        <td class="num">${esc(_num(a.molarRatio))}</td>
+      </tr>`;
+  }
+
+  const synthHtml = _renderSynthesisBlock(sample.synthesis, sample.properties, null);
+  const toggleHtml = synthHtml
+    ? `<div class="sample-synth-toggle" onclick="this.parentElement.classList.toggle('open')">▾ 合成条件・物性を表示</div>${synthHtml}`
+    : '';
+
+  return `
+    <div class="sample-card">
+      <div class="sample-card-header">
+        <span class="sc-name">${name}</span>
+        ${mtype ? `<span class="sc-mtype">${mtype}</span>` : ''}
+        ${cls ? `<span class="sc-mtype" style="background:#e9d5ff;color:#6b21a8;">${cls}</span>` : ''}
+      </div>
+      ${comps.length ? `
+        <div class="sample-section-label">components</div>
+        <table class="sample-table">
+          <thead><tr><th>type</th><th>name</th><th>class</th><th>MW</th><th>wt ratio</th><th>mol ratio</th></tr></thead>
+          <tbody>${compRows}</tbody>
+        </table>` : ''}
+      ${adds.length ? `
+        <div class="sample-section-label">additives</div>
+        <table class="sample-table">
+          <thead><tr><th>type</th><th>name</th><th></th><th>MW</th><th>wt ratio</th><th>mol ratio</th></tr></thead>
+          <tbody>${addRows}</tbody>
+        </table>` : ''}
+      ${toggleHtml}
+    </div>`;
+}
+
 function _renderPaperAnalysis(parsed, filename) {
   const metaEl = document.getElementById('pdf-meta');
   const itemsEl = document.getElementById('pdf-items');
   const info = parsed.paperInfo || {};
-  const polymers = Array.isArray(parsed.polymers) ? parsed.polymers : [];
-  const monomers = Array.isArray(parsed.monomers) ? parsed.monomers : [];
+  const samples = Array.isArray(parsed.samples) ? parsed.samples : [];
 
   metaEl.innerHTML = `
     <div class="paper-meta">
@@ -2236,66 +2396,73 @@ function _renderPaperAnalysis(parsed, filename) {
     </div>`;
 
   const cards = [];
-  const items = [];
-  for (const p of polymers) {
-    const elements = (p.elements && p.elements.length ? p.elements : [{
-      name: p.name || '', smiles: p.repeatUnitSmiles || '', polyGroup: p.polyGroup || '', note: p.context || ''
-    }]).filter(e => (e.smiles || '').trim());
-    if (!elements.length) continue;
-    const key = (p.abbreviation || p.name || 'POLY').replace(/[^A-Za-z0-9\-]/g, '').slice(0, 20) || 'POLY';
-    const synthNote = _formatSynthesisPlain(p.synthesis, p.characterization, p.context);
-    if (synthNote) {
-      elements[0] = { ...elements[0], note: [elements[0].note, synthNote].filter(Boolean).join(' ｜ ') };
+  const seenKeys = new Set();
+  let polyCount = 0, addCount = 0;
+  for (const sample of samples) {
+    for (const c of (sample.components || [])) {
+      if (!c) continue;
+      const elements = (c.elements || [])
+        .filter(e => e && (e.smiles || '').trim())
+        .map(e => ({
+          name: e.name || '', smiles: (e.smiles || '').trim(),
+          polyGroup: e.polymerizableGroup || '', note: e.note || ''
+        }));
+      if (!elements.length) continue;
+      polyCount++;
+      const key = (c.abbreviation || c.polymerDropdown?.split('|')[0] || c.name || 'POLY').replace(/[^A-Za-z0-9\-]/g, '').slice(0, 20) || 'POLY';
+      if (seenKeys.has(key + '/' + elements[0].smiles)) continue;
+      seenKeys.add(key + '/' + elements[0].smiles);
+      const synthNote = _formatSynthesisPlain(sample.synthesis, sample.properties, null);
+      const compNote = [
+        c.commercialName ? `商品名: ${c.commercialName}` : null,
+        c.mw ? `${c.mwType || 'MW'}: ${c.mw}` : null,
+        c.weightRatio ? `wt%: ${c.weightRatio}` : null,
+        c.molarRatio ? `mol%: ${c.molarRatio}` : null,
+        synthNote || null,
+      ].filter(Boolean).join(' ｜ ');
+      if (compNote) elements[0] = { ...elements[0], note: [elements[0].note, compNote].filter(Boolean).join(' ｜ ') };
+      const id = ++_pubchemCacheId;
+      _pubchemCache.set(id, {
+        key, label: `${key}|${c.name || ''}`,
+        displayName: c.name || '',
+        defaultClass: c.homopolymerType || (elements.length >= 2 ? 'Copolymer' : 'Homopolymer'),
+        aliases: c.abbreviation && c.abbreviation !== c.name ? [c.name].filter(Boolean) : [],
+        source: 'llm',
+        elements,
+        monomers: (c.monomers || []).filter(m => m && m.smiles).map(m => ({
+          name: m.name || '', smiles: m.smiles, role: m.role || ''
+        }))
+      });
+      cards.push(renderGeminiResultCard(id, key, c.name || key));
     }
-    const id = ++_pubchemCacheId;
-    _pubchemCache.set(id, {
-      key, label: `${key}|${p.displayName || p.name || ''}`,
-      displayName: p.displayName || p.name || '',
-      defaultClass: p.defaultClass || (elements.length >= 2 ? 'Copolymer' : 'Homopolymer'),
-      aliases: p.abbreviation && p.abbreviation !== p.name ? [p.name].filter(Boolean) : [],
-      source: 'llm',
-      elements,
-      monomers: (p.monomers || []).filter(m => m && m.smiles).map(m => ({
-        name: m.name || '', smiles: m.smiles, role: m.role || ''
-      }))
-    });
-    cards.push(renderGeminiResultCard(id, key, p.displayName || p.name || key));
-    const synthHtml = _renderSynthesisBlock(p.synthesis, p.characterization, p.context);
-    items.push(`
-      <div class="paper-item-wrap${synthHtml ? '' : ''}">
-        <div class="paper-item" onclick="${synthHtml ? "this.parentElement.classList.toggle('open')" : ''}">
-          <span class="pi-kind poly">POLY</span>
-          <span class="pi-name" title="${esc(p.displayName || p.name || '')}">${esc(p.abbreviation || p.name || key)}${synthHtml ? ' ▾' : ''}</span>
-          <span class="pi-smi" title="${esc(elements[0].smiles)}">${esc(elements[0].smiles)}</span>
-        </div>
-        ${synthHtml}
-      </div>`);
-  }
-  for (const m of monomers) {
-    if (!m || !m.smiles) continue;
-    const key = (m.name || 'MONO').split(/[\s(]/)[0].replace(/[^A-Za-z0-9\-]/g, '').toUpperCase().slice(0, 20) || 'MONO';
-    const id = ++_pubchemCacheId;
-    _pubchemCache.set(id, {
-      key, label: `${key}|${m.name || ''}`,
-      displayName: m.name || '', defaultClass: 'Homopolymer',
-      aliases: [], source: 'llm',
-      elements: [{ name: m.name || '', smiles: m.smiles, polyGroup: m.role || '', note: '論文から抽出' }],
-      monomers: []
-    });
-    cards.push(renderGeminiResultCard(id, key, m.name || key));
-    items.push(`
-      <div class="paper-item-wrap">
-        <div class="paper-item">
-          <span class="pi-kind mono">MONO</span>
-          <span class="pi-name" title="${esc(m.name || '')}">${esc(m.name || key)}</span>
-          <span class="pi-smi" title="${esc(m.smiles)}">${esc(m.smiles)}</span>
-        </div>
-      </div>`);
+    for (const a of (sample.additives || [])) {
+      if (!a || !a.smiles) continue;
+      addCount++;
+      const key = (a.name || 'ADD').split(/[\s(]/)[0].replace(/[^A-Za-z0-9\-]/g, '').toUpperCase().slice(0, 20) || 'ADD';
+      if (seenKeys.has(key + '/' + a.smiles)) continue;
+      seenKeys.add(key + '/' + a.smiles);
+      const note = [
+        `添加剤 (${a.additiveType || 'Other'})`,
+        a.commercialName ? `商品名: ${a.commercialName}` : null,
+        a.mw ? `MW: ${a.mw}` : null,
+        a.weightRatio ? `wt%: ${a.weightRatio}` : null,
+      ].filter(Boolean).join(' ｜ ');
+      const id = ++_pubchemCacheId;
+      _pubchemCache.set(id, {
+        key, label: `${key}|${a.name || ''}`,
+        displayName: a.name || '', defaultClass: 'Homopolymer',
+        aliases: [], source: 'llm',
+        elements: [{ name: a.name || '', smiles: a.smiles, polyGroup: a.additiveType || '', note }],
+        monomers: []
+      });
+      cards.push(renderGeminiResultCard(id, key, a.name || key));
+    }
   }
 
-  itemsEl.innerHTML = items.length
-    ? `<div style="font-size:11px;color:var(--gray-500);margin:4px 2px;">検出: ${polymers.length} ポリマー / ${monomers.length} モノマー</div>` + items.join('')
-    : '<div style="font-size:12px;color:var(--gray-400);padding:8px 0;">ポリマー / モノマーは見つかりませんでした。</div>';
+  itemsEl.innerHTML = samples.length
+    ? `<div style="font-size:11px;color:var(--gray-500);margin:8px 2px 4px;">検出: ${samples.length} 試料 / ${polyCount} ポリマー / ${addCount} 添加剤</div>`
+      + samples.map((s, i) => _renderSampleCard(s, i)).join('')
+    : '<div style="font-size:12px;color:var(--gray-400);padding:8px 0;">試料情報は見つかりませんでした。</div>';
 
   const results = document.getElementById('psearch-results');
   if (cards.length) {
@@ -2304,7 +2471,7 @@ function _renderPaperAnalysis(parsed, filename) {
       `<div class="psearch-section-sep">📄 「${esc(info.title || filename).slice(0, 60)}」 から抽出</div>`
       + cards.join('');
   }
-  _setPdfStatus(`✓ 完了: ${polymers.length} ポリマー / ${monomers.length} モノマーを右に表示`);
+  _setPdfStatus(`✓ 完了: ${samples.length} 試料 / ${polyCount} ポリマー / ${addCount} 添加剤`);
 }
 
 // =============================================
