@@ -592,6 +592,13 @@ pre.json-pre {
   padding: 1px 7px; border-radius: 8px;
   white-space: nowrap; flex-shrink: 0;
 }
+.psearch-badge-registered {
+  font-size: 10.5px; font-weight: 700;
+  background: #dcfce7; color: #166534;
+  border: 1px solid #86efac;
+  padding: 2px 8px; border-radius: 8px;
+  white-space: nowrap; flex-shrink: 0;
+}
 .psearch-add-btn-pubchem { background: #d97706 !important; }
 .psearch-add-btn-pubchem:hover { background: #b45309 !important; }
 .psearch-card-llm { border-color: #c4b5fd; }
@@ -1262,6 +1269,20 @@ function parsePolymerQuery(raw) {
     .filter(t => t.length > 1 && !/^\d+\.?\d*$/.test(t));
 }
 
+function _normSmiles(s) {
+  return (s || '').trim().replace(/\s+/g, '').replace(/^\[\$\]/, '').replace(/\[\$\]$/, '');
+}
+// 公開 DB (POLYMER_DB) 内で、同一 SMILES の top-level エントリを返す。
+// source:'pubchem' な custom は public 扱いしない。
+function findPublicDbEntryBySmiles(smiles) {
+  const norm = _normSmiles(smiles);
+  if (!norm) return null;
+  return POLYMER_DB.find(p => {
+    if (p.sentinel || p.source === 'pubchem') return false;
+    return (p.elements || []).some(el => _normSmiles(el.smiles) === norm);
+  }) || null;
+}
+
 function renderResultCard(p, tok) {
   const matchedAlias = (p.aliases || []).filter(a => a.toLowerCase().includes(tok.toLowerCase()));
   const aliasHtml = matchedAlias.length
@@ -1269,8 +1290,13 @@ function renderResultCard(p, tok) {
          製品名・別名ヒット: <span style="color:#92400e;font-weight:600;">${matchedAlias.map(a => esc(a)).join('、')}</span>
        </div>`
     : '';
-  const customBadge = p.source === 'pubchem'
-    ? `<span class="psearch-badge-custom">カスタム登録済</span>` : '';
+  const isPublicDb = !p.source;
+  const headerBadge = isPublicDb
+    ? `<span class="psearch-badge-registered">✓ DB 登録済</span>`
+    : (p.source === 'pubchem' ? `<span class="psearch-badge-custom">カスタム登録済</span>` : '');
+  const registerPolyBtn = isPublicDb
+    ? ''
+    : `<button class="psearch-add-btn" style="background:#16a34a;border-color:#16a34a;margin-right:4px;" onclick="registerPolymerToDB('${esc(p.key)}')">＋ DB 登録</button>`;
   const keyEsc = esc(p.key);
   const monomers = p.monomers || [];
   const monomersHtml = monomers.length
@@ -1279,15 +1305,20 @@ function renderResultCard(p, tok) {
            🧪 構成モノマー
            <button class="psearch-add-btn" style="background:#6b7280;border-color:#6b7280;font-size:10.5px;padding:2px 8px;margin-left:6px;" onclick="editMonomers('${keyEsc}')">編集</button>
          </div>
-         ${monomers.map((m, i) => `
+         ${monomers.map((m, i) => {
+           const hit = findPublicDbEntryBySmiles(m.smiles);
+           const monoBtn = hit
+             ? `<span class="psearch-badge-registered" title="${esc(hit.displayName || '')}">✓ 登録済 (${esc(hit.key)})</span>`
+             : `<button class="psearch-add-btn" style="background:#16a34a;border-color:#16a34a;font-size:10.5px;padding:2px 8px;" onclick="registerMonomerToDB('${keyEsc}', ${i})">＋ DB 登録</button>`;
+           return `
            <div style="display:flex;align-items:center;gap:6px;padding:2px 0;font-size:12px;">
              <span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:3px;font-size:10.5px;">${esc(m.role || 'monomer')}</span>
              <span style="min-width:180px;color:var(--gray-700);">${esc(m.name || '')}</span>
              <span style="flex:1;font-family:var(--mono);font-size:11px;color:var(--gray-600);word-break:break-all;">${esc(m.smiles || '')}</span>
              <button class="psearch-add-btn" style="background:#0284c7;border-color:#0284c7;font-size:10.5px;padding:2px 8px;" onclick="showStructureFromSmiles('${(m.smiles || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">構造</button>
-             <button class="psearch-add-btn" style="background:#16a34a;border-color:#16a34a;font-size:10.5px;padding:2px 8px;" onclick="registerMonomerToDB('${keyEsc}', ${i})">＋ DB 登録</button>
+             ${monoBtn}
            </div>
-         `).join('')}
+         `;}).join('')}
        </div>`
     : `<div style="padding:6px 12px;font-size:11px;color:var(--gray-400);border-top:1px dashed var(--gray-200);">
          🧪 構成モノマー未登録
@@ -1297,10 +1328,10 @@ function renderResultCard(p, tok) {
   <div class="psearch-card" data-polymer-key="${keyEsc}">
     <div class="psearch-card-header">
       <span class="psearch-key">${keyEsc}</span>
-      ${customBadge}
+      ${headerBadge}
       <span class="psearch-fullname">${esc(p.displayName || p.label)}</span>
       <button class="psearch-add-btn" style="background:#0284c7;border-color:#0284c7;margin-right:4px;" onclick="editPolymerEntry('${keyEsc}')">ポリマー編集</button>
-      <button class="psearch-add-btn" style="background:#16a34a;border-color:#16a34a;margin-right:4px;" onclick="registerPolymerToDB('${keyEsc}')">＋ DB 登録</button>
+      ${registerPolyBtn}
       <button class="psearch-add-btn" onclick="addComponentFromSearch('${keyEsc}')">+ component に追加</button>
     </div>
     ${aliasHtml}
