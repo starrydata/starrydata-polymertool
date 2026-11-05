@@ -2130,89 +2130,145 @@ function _fileToBase64(file) {
 }
 
 async function analyzePdfWithGemini(base64, key) {
-  const prompt = `あなたは高分子化学データベースの登録担当です。添付された論文 PDF を全文確認し、記載された「試料 (sample)」単位で組成・配合情報・合成条件を抽出してください。
+  const prompt = `あなたは Starrydata2 の高分子化学キュレーターです。添付された論文 PDF を全文確認し、記載された「試料 (sample)」単位で組成・配合・合成を**キュレーターと同等の粒度**で抽出してください。
 
-論文には通常、複数の試料 (例: PI-1, PI-2, blend-A ...) があり、各試料は 1 つ以上の component (主成分ポリマー) と 0 個以上の additive (開始剤・難燃剤・フィラー等) で構成されます。
+論文には通常、複数の試料 (例: PI-1, PI-0.25, blend-A ...) があり、各試料は 1 つ以上の component と 0 個以上の additive で構成されます。
 
-出力は以下の JSON スキーマに厳密に従ってください（Markdown や説明は不要）:
+# 重要な抽出方針 (キュレーター基準)
+
+1. **共重合体 (copolymer) は element を複数に分割**する
+   - 各 element に SMILES, Molecular weight, Molar ratio を**必ず**入れる
+   - 共重合体を 1 つの SMILES でまとめず、構成繰り返し単位ごとに分解する
+2. **BigSMILES の結合点記法**は \`[<]...[>]\` (向き付き) または \`[$]\` のどちらでも可。論文の構造図から正確に読む
+3. **Molecular weight** は繰り返し単位の計算分子量 (論文中に無くても構造式から計算)
+4. **Molar ratio** は論文中の仕込み比・変数 (X, 1-X, Y 等) を数値で確定させる。複数組成 (PI-0.25, PI-0.50 等) がある場合は各試料に該当する値を取る
+5. **合成方法 (synthesis.steps)** は多段階の反応・後処理をステップ配列で記述する (後述の few-shot 参照)
+
+# 出力 JSON スキーマ
 
 {
-  "paperInfo": {
-    "title": "論文タイトル",
-    "authors": ["著者名"],
-    "doi": "10.xxxx/xxxx または null",
-    "journal": "ジャーナル名 または null",
-    "year": 2024
-  },
+  "paperInfo": { "title":"", "authors":[], "doi":"", "journal":"", "year":0 },
   "samples": [
     {
-      "sampleName": "論文中の試料名 (例: PI-1, PI-ODA, Sample A)",
+      "sampleName": "論文中の試料名",
       "materialType": "Neat resin | Compound | Composite",
       "compositionClass": "Homopolymer | Copolymer | Blend",
+      "polymerClass": "Polyimide | Polysulfone | Epoxy など (= 大分類)",
       "components": [
         {
-          "polymerDropdown": "Starrydata2 の component dropdown に対応する略号 (PPE / BMI / CE / Phenoxy resin / Epoxy / PI / SMA / PB / PS / BPVE / Acrylic polymer / PBz / PBE / PBO / PU / PO / Fluoropolymer / LCP / Other) — 不明なら Other",
-          "name": "ポリマー正式名",
+          "polymerDropdown": "PPE / BMI / CE / Phenoxy resin / Epoxy / PI / SMA / PB / PS / BPVE / Acrylic polymer / PBz / PBE / PBO / PU / PO / Fluoropolymer / LCP / Other",
+          "name": "ポリマー正式名 (例: Polyimide:TAHQ-m-Tolidine-3,4 ODA copolymer)",
           "abbreviation": "略称",
-          "mw": "数平均分子量 Mn (g/mol、数値のみ) または null",
-          "mwType": "Mn / Mw / Mv (指定なければ空文字)",
-          "weightRatio": "重量比 (数値のみ、合計 100 でなくても可) または null",
-          "molarRatio": "モル比 (数値のみ) または null",
-          "commercialName": "商品名 (例: Udel, Kapton) または空文字",
+          "mw": null, "mwType": "",
+          "weightRatio": null, "molarRatio": null,
+          "commercialName": "",
           "homopolymerType": "Homopolymer | Copolymer | Block | Graft",
           "elements": [
             {
-              "name": "繰り返し単位名",
-              "smiles": "BigSMILES。[$] で結合点を示す",
-              "polymerizableGroup": "重合官能基 (例: imide, ester, ether, vinyl, maleimide)",
-              "mw": "繰り返し単位分子量 or null",
-              "molecularVolume": "分子体積 cm3/mol or null",
-              "weightRatio": "この繰り返し単位の重量比 (共重合体用) or null",
-              "molarRatio": "モル比 (共重合体用) or null"
+              "name": "繰り返し単位の正式名 (例: Polyimide:TAHQ-m-Tolidine)",
+              "smiles": "BigSMILES。共重合体なら element ごとに別 SMILES。[<]/[>] または [$] を使う",
+              "polymerizableGroup": "imide / ester / ether / vinyl / maleimide など",
+              "mw": "繰り返し単位分子量 (数値、小数点込み)",
+              "molecularVolume": null,
+              "weightRatio": null,
+              "molarRatio": "共重合体の場合は必須 (例: 0.75, 0.25)"
             }
           ],
           "monomers": [
-            { "name": "モノマー名", "smiles": "化合物 SMILES ([$] なし)", "role": "diamine/bisphenol/vinyl など" }
+            { "name":"", "smiles":"化合物 SMILES ([$] なし)", "role":"diamine/bisphenol/dianhydride/vinyl 等" }
           ]
         }
       ],
       "additives": [
-        {
-          "additiveType": "Initiator | Flame retardant | Dispersant | Surfactant | Filler | Bubble/Void | Other",
-          "name": "添加剤名",
-          "commercialName": "商品名",
-          "smiles": "化合物 SMILES",
-          "mw": "分子量 or null",
-          "molecularVolume": "分子体積 cm3/mol or null",
-          "weightRatio": "重量比 or null",
-          "molarRatio": "モル比 or null"
-        }
+        { "additiveType":"Initiator | Flame retardant | Dispersant | Surfactant | Filler | Bubble/Void | Other",
+          "name":"", "commercialName":"", "smiles":"",
+          "mw": null, "molecularVolume": null, "weightRatio": null, "molarRatio": null }
       ],
       "synthesis": {
-        "method": "重合法 (solution polycondensation / radical / ROP / interfacial / melt / bulk / emulsion / ATRP など)",
-        "temperature": "温度条件",
-        "time": "反応時間",
-        "solvent": "溶媒",
-        "catalyst": "触媒・開始剤・塩基",
-        "atmosphere": "N2 / Ar / air",
-        "procedure": "手順を 1-3 文で要約",
-        "workup": "後処理・精製",
-        "yield": "収率",
-        "achievedMw": "実測分子量 (Mn=25000 等)"
+        "overview": "全体フロー 1-2 文",
+        "steps": [
+          {
+            "name": "ステップ名 (例: Drying of solvents and compounds / Diamine dissolution and PAA formation / Thermal imidization of PAA)",
+            "compounds": [ { "name":"", "formula":"", "amount":"論文記載の仕込み量。変数込み可 (例: 6.5*(1-X) mmol)" } ],
+            "solvent": { "name":"", "amount":"" },
+            "conditions": { "temperature":"段階昇温も記述可 (例: 80 for 12 h; 100 for 1 h; 200 for 1 h; 300 for 1 h)",
+                            "time":"分または時間単位 (例: 720 min, 12 h)",
+                            "other":"雰囲気・器具・特記事項をまとめて" }
+          }
+        ]
       },
-      "properties": "測定された物性 (Tg, Td5, 誘電率, 弾性率 etc. ; 区切り)"
+      "properties": "測定された物性 (Tg, Td5, 誘電率, 弾性率, Mn/Mw 等 ; 区切り)"
     }
   ]
 }
 
-ルール:
-- 試料ごとに 1 エントリ。論文の表 (Table 1 等) と本文を照合して正確な値を取ること
+# Few-shot (キュレーターのお手本 1 例)
+
+PI 共重合体 "PI-0.25" (TAHQ-m-tolidine-3,4-ODA 系) の抽出結果:
+
+{
+  "sampleName": "PI-0.25",
+  "materialType": "Neat resin",
+  "compositionClass": "Copolymer",
+  "polymerClass": "Polyimide",
+  "components": [{
+    "polymerDropdown": "PI",
+    "name": "Polyimide:TAHQ-m-Tolidine-3,4 ODA copolymer",
+    "homopolymerType": "Copolymer",
+    "elements": [
+      {
+        "name": "Polyimide:TAHQ-m-Tolidine",
+        "smiles": "[<]c1cc(C)c(cc1)c1ccc(cc1(C))N1C(=O)c2ccc(cc2C1(=O))C(=O)Oc1ccc(cc1)OC(=O)c1cc2C(=O)N(C(=O)c2cc1)[>]",
+        "polymerizableGroup": "imide",
+        "mw": 634.6,
+        "molarRatio": 0.75
+      },
+      {
+        "name": "Polyimide:TAHQ-3,4ODA",
+        "smiles": "[<]c1ccc(cc1)Oc1cc(ccc1)N1C(=O)c2ccc(cc2C1(=O))C(=O)Oc1ccc(cc1)OC(=O)c1cc2C(=O)N(C(=O)c2cc1)[>]",
+        "polymerizableGroup": "imide",
+        "mw": 622.55,
+        "molarRatio": 0.25
+      }
+    ]
+  }],
+  "synthesis": {
+    "overview": "溶液重合で PAA を生成し、熱イミド化で PI 膜を得る標準手順",
+    "steps": [
+      {
+        "name": "Drying of solvents and compounds",
+        "compounds": [ {"name":"DMAc","amount":"N/A"}, {"name":"Dianhydrides","amount":"N/A"}, {"name":"Diamines","amount":"N/A"} ],
+        "solvent": {"name":"N/A","amount":"N/A"},
+        "conditions": {"temperature":"DMAc dried over 4 Å molecular sieves","time":"480 min (≥8 h)","other":"Dianhydrides and diamines dried under vacuum; glassware oven-dried; nitrogen atmosphere"}
+      },
+      {
+        "name": "Diamine dissolution and PAA formation",
+        "compounds": [
+          {"name":"m-tolidine","amount":"6.5*(1-X) mmol"},
+          {"name":"3,4-ODA","amount":"6.5*X mmol"},
+          {"name":"TAHQ","amount":"6.5 mmol"}
+        ],
+        "solvent": {"name":"DMAc","amount":"N/A"},
+        "conditions": {"temperature":"room temperature","time":"720 min (12 h)","other":"100 mL three-neck flask under dry N2; brief degassing (vacuum/N2 sparging); proportionally add TAHQ"}
+      },
+      {
+        "name": "Thermal imidization of PAA",
+        "compounds": [ {"name":"Poly(amic acid) (PAA)","amount":"N/A"} ],
+        "solvent": {"name":"N/A","amount":"N/A"},
+        "conditions": {"temperature":"80 for 12 h; 100 for 1 h; 200 for 1 h; 300 for 1 h","time":"720 (80 °C), 60 (100 °C), 60 (200 °C), 60 (300 °C) min","other":"N2 atmosphere; 2-3 °C min-1 ramps; casting onto glass; after degassing"}
+      }
+    ]
+  }
+}
+
+# 遵守ルール
 - 芳香環は小文字 (c1ccccc1)、立体化学は代表構造で可
-- 無機フィラーや空孔のみの系は収集対象外
-- Data Type は Experimental のみ (Reference / Calculation は除外)
-- 不明なフィールドは空文字または null (推測で埋めない)
-- weightRatio / molarRatio は論文記載の数値をそのまま (単位 % や相対値)
-- polymerDropdown は上記リストから最も近いものを選び、該当なしは "Other"`;
+- 無機フィラー・空孔のみの系は収集対象外
+- Reference / Calculation データは除外、Experimental のみ
+- 不明は null または空文字 (推測しない)
+- weightRatio / molarRatio は論文記載の数値 (% や相対値)
+- polymerDropdown はリスト最近似、該当なしは "Other"
+- **共重合体は必ず elements を複数にして molarRatio と mw を入れる**`;
 
   const models = ['gemini-3.8-flash', 'gemini-3.6-flash'];
   const body = JSON.stringify({
@@ -2302,14 +2358,43 @@ function _renderSynthesisBlock(synthesis, characterization, context) {
   if (!synthesis && !characterization && !context) return '';
   const rows = [];
   if (synthesis && typeof synthesis === 'object') {
-    for (const [k, label] of _SYNTH_FIELDS) {
-      const v = synthesis[k];
-      if (v && String(v).trim() && String(v).toLowerCase() !== 'null' && String(v).toLowerCase() !== 'n/a') {
-        rows.push(`<div class="paper-synth-row"><span class="paper-synth-label">${label}</span><span class="paper-synth-val">${esc(String(v))}</span></div>`);
-      }
+    // overview
+    if (synthesis.overview && String(synthesis.overview).trim()) {
+      rows.push(`<div class="paper-synth-row"><span class="paper-synth-label">概要</span><span class="paper-synth-val">${esc(String(synthesis.overview))}</span></div>`);
     }
-    if (synthesis.procedure && String(synthesis.procedure).trim()) {
-      rows.push(`<div class="paper-synth-proc"><span class="paper-synth-label" style="min-width:auto;">手順</span><div class="paper-synth-val" style="margin-top:2px;">${esc(String(synthesis.procedure))}</div></div>`);
+    // multi-step synthesis (新形式)
+    if (Array.isArray(synthesis.steps) && synthesis.steps.length) {
+      synthesis.steps.forEach((st, i) => {
+        if (!st) return;
+        const parts = [];
+        parts.push(`<div style="font-weight:700;color:#4c1d95;margin-bottom:3px;">Step ${i+1}: ${esc(st.name || '')}</div>`);
+        if (Array.isArray(st.compounds) && st.compounds.length) {
+          const cRows = st.compounds.filter(c => c && c.name).map(c =>
+            `<li><span style="font-weight:600;">${esc(c.name)}</span>${c.formula ? ` <span style="color:var(--gray-400);">(${esc(c.formula)})</span>` : ''}${c.amount && c.amount !== 'N/A' ? ` <span style="color:#6d28d9;">${esc(c.amount)}</span>` : ''}</li>`
+          ).join('');
+          if (cRows) parts.push(`<div style="margin:2px 0;"><span class="paper-synth-label" style="min-width:auto;">化合物</span><ul style="margin:2px 0 2px 16px;padding:0;list-style:disc;">${cRows}</ul></div>`);
+        }
+        if (st.solvent && st.solvent.name && st.solvent.name !== 'N/A') {
+          const amt = st.solvent.amount && st.solvent.amount !== 'N/A' ? ` (${esc(st.solvent.amount)})` : '';
+          parts.push(`<div class="paper-synth-row"><span class="paper-synth-label">溶媒</span><span class="paper-synth-val">${esc(st.solvent.name)}${amt}</span></div>`);
+        }
+        const cond = st.conditions || {};
+        if (cond.temperature && cond.temperature !== 'N/A') parts.push(`<div class="paper-synth-row"><span class="paper-synth-label">温度</span><span class="paper-synth-val">${esc(cond.temperature)}</span></div>`);
+        if (cond.time && cond.time !== 'N/A') parts.push(`<div class="paper-synth-row"><span class="paper-synth-label">時間</span><span class="paper-synth-val">${esc(cond.time)}</span></div>`);
+        if (cond.other && cond.other !== 'N/A') parts.push(`<div class="paper-synth-row"><span class="paper-synth-label">その他</span><span class="paper-synth-val">${esc(cond.other)}</span></div>`);
+        rows.push(`<div style="padding:8px 0;border-top:1px dashed #ddd6fe;margin-top:6px;">${parts.join('')}</div>`);
+      });
+    } else {
+      // 旧 flat 形式のフォールバック
+      for (const [k, label] of _SYNTH_FIELDS) {
+        const v = synthesis[k];
+        if (v && String(v).trim() && String(v).toLowerCase() !== 'null' && String(v).toLowerCase() !== 'n/a') {
+          rows.push(`<div class="paper-synth-row"><span class="paper-synth-label">${label}</span><span class="paper-synth-val">${esc(String(v))}</span></div>`);
+        }
+      }
+      if (synthesis.procedure && String(synthesis.procedure).trim()) {
+        rows.push(`<div class="paper-synth-proc"><span class="paper-synth-label" style="min-width:auto;">手順</span><div class="paper-synth-val" style="margin-top:2px;">${esc(String(synthesis.procedure))}</div></div>`);
+      }
     }
   }
   if (characterization && String(characterization).trim()) {
@@ -2325,19 +2410,32 @@ function _renderSynthesisBlock(synthesis, characterization, context) {
 function _formatSynthesisPlain(synthesis, characterization, context) {
   const parts = [];
   if (synthesis && typeof synthesis === 'object') {
-    for (const [k, label] of _SYNTH_FIELDS) {
-      const v = synthesis[k];
-      if (v && String(v).trim() && String(v).toLowerCase() !== 'null' && String(v).toLowerCase() !== 'n/a') {
-        parts.push(`${label}: ${String(v).trim()}`);
+    if (synthesis.overview) parts.push(`概要: ${String(synthesis.overview).trim()}`);
+    if (Array.isArray(synthesis.steps) && synthesis.steps.length) {
+      synthesis.steps.forEach((st, i) => {
+        if (!st) return;
+        const tokens = [];
+        if (st.name) tokens.push(st.name);
+        if (st.conditions?.temperature && st.conditions.temperature !== 'N/A') tokens.push(`${st.conditions.temperature}`);
+        if (st.conditions?.time && st.conditions.time !== 'N/A') tokens.push(`${st.conditions.time}`);
+        if (st.solvent?.name && st.solvent.name !== 'N/A') tokens.push(`in ${st.solvent.name}`);
+        if (tokens.length) parts.push(`Step${i+1}: ${tokens.join(' / ')}`);
+      });
+    } else {
+      for (const [k, label] of _SYNTH_FIELDS) {
+        const v = synthesis[k];
+        if (v && String(v).trim() && String(v).toLowerCase() !== 'null' && String(v).toLowerCase() !== 'n/a') {
+          parts.push(`${label}: ${String(v).trim()}`);
+        }
       }
-    }
-    if (synthesis.procedure && String(synthesis.procedure).trim()) {
-      parts.push(`手順: ${String(synthesis.procedure).trim()}`);
+      if (synthesis.procedure && String(synthesis.procedure).trim()) {
+        parts.push(`手順: ${String(synthesis.procedure).trim()}`);
+      }
     }
   }
   if (characterization && String(characterization).trim()) parts.push(`物性: ${String(characterization).trim()}`);
   if (context && String(context).trim()) parts.push(`文脈: ${String(context).trim()}`);
-  return parts.join(' / ');
+  return parts.join(' ｜ ');
 }
 
 function _num(v) {
