@@ -223,6 +223,19 @@ body {
   user-select: none;
 }
 .sample-synth-toggle:hover { background: #f3e8ff; }
+.sample-copy-bar {
+  display: flex; gap: 6px; padding: 8px 12px;
+  border-top: 1px solid var(--gray-200); background: #f8fafc;
+}
+.sample-copy-btn {
+  font-size: 11px; font-weight: 600;
+  padding: 4px 10px; border-radius: 6px;
+  background: #4f46e5; color: #fff;
+  border: 1px solid #4338ca;
+  cursor: pointer;
+}
+.sample-copy-btn:hover { background: #4338ca; }
+.sample-copy-btn.ok { background: #16a34a; border-color: #15803d; }
 .sample-card .paper-synth { display: none; }
 .sample-card.open .paper-synth { display: block; }
 .pdf-status { font-size: 12px; color: var(--gray-500); padding: 4px 2px; }
@@ -2189,10 +2202,10 @@ async function analyzePdfWithGemini(base64, key) {
         "steps": [
           {
             "name": "ステップ名 (例: Drying of solvents and compounds / Diamine dissolution and PAA formation / Thermal imidization of PAA)",
-            "compounds": [ { "name":"", "formula":"", "amount":"論文記載の仕込み量。変数込み可 (例: 6.5*(1-X) mmol)" } ],
-            "solvent": { "name":"", "amount":"" },
-            "conditions": { "temperature":"段階昇温も記述可 (例: 80 for 12 h; 100 for 1 h; 200 for 1 h; 300 for 1 h)",
-                            "time":"分または時間単位 (例: 720 min, 12 h)",
+            "compounds": [ { "name":"", "formula":"N/A または化学式", "amount_g":"論文記載の仕込み量。変数込み可 (例: N/A (6.5*(1-X) mmol))" } ],
+            "solvent": { "name":"", "amount_g":"N/A または量" },
+            "conditions": { "temperature_degC":"段階昇温も記述可 (例: 80 for 12 h; 100 for 1 h; 200 for 1 h; 300 for 1 h)",
+                            "time_min":"分単位 (例: 720 (12 h), 720 (80 ℃), 60 (100 ℃))",
                             "other":"雰囲気・器具・特記事項をまとめて" }
           }
         ]
@@ -2237,25 +2250,25 @@ PI 共重合体 "PI-0.25" (TAHQ-m-tolidine-3,4-ODA 系) の抽出結果:
     "steps": [
       {
         "name": "Drying of solvents and compounds",
-        "compounds": [ {"name":"DMAc","amount":"N/A"}, {"name":"Dianhydrides","amount":"N/A"}, {"name":"Diamines","amount":"N/A"} ],
-        "solvent": {"name":"N/A","amount":"N/A"},
-        "conditions": {"temperature":"DMAc dried over 4 Å molecular sieves","time":"480 min (≥8 h)","other":"Dianhydrides and diamines dried under vacuum; glassware oven-dried; nitrogen atmosphere"}
+        "compounds": [ {"name":"DMAc","formula":"N/A","amount_g":"N/A"}, {"name":"Dianhydrides","formula":"N/A","amount_g":"N/A"}, {"name":"Diamines","formula":"N/A","amount_g":"N/A"} ],
+        "solvent": {"name":"N/A","amount_g":"N/A"},
+        "conditions": {"temperature_degC":"DMAc dried over 4 Å molecular sieves","time_min":"480 (≥8 h)","other":"Dianhydrides and diamines dried under vacuum; glassware oven-dried; nitrogen atmosphere"}
       },
       {
         "name": "Diamine dissolution and PAA formation",
         "compounds": [
-          {"name":"m-tolidine","amount":"6.5*(1-X) mmol"},
-          {"name":"3,4-ODA","amount":"6.5*X mmol"},
-          {"name":"TAHQ","amount":"6.5 mmol"}
+          {"name":"m-tolidine","formula":"N/A","amount_g":"N/A (6.5*(1-X) mmol)"},
+          {"name":"3,4-ODA","formula":"N/A","amount_g":"N/A (6.5*X mmol)"},
+          {"name":"TAHQ","formula":"N/A","amount_g":"N/A (6.5 mmol)"}
         ],
-        "solvent": {"name":"DMAc","amount":"N/A"},
-        "conditions": {"temperature":"room temperature","time":"720 min (12 h)","other":"100 mL three-neck flask under dry N2; brief degassing (vacuum/N2 sparging); proportionally add TAHQ"}
+        "solvent": {"name":"DMAc","amount_g":"N/A"},
+        "conditions": {"temperature_degC":"room temperature","time_min":"720 (12 h)","other":"100 mL three-neck flask under dry N2, brief degassing (vacuum/N2 sparging), proportionally add TAHQ"}
       },
       {
         "name": "Thermal imidization of PAA",
-        "compounds": [ {"name":"Poly(amic acid) (PAA)","amount":"N/A"} ],
-        "solvent": {"name":"N/A","amount":"N/A"},
-        "conditions": {"temperature":"80 for 12 h; 100 for 1 h; 200 for 1 h; 300 for 1 h","time":"720 (80 °C), 60 (100 °C), 60 (200 °C), 60 (300 °C) min","other":"N2 atmosphere; 2-3 °C min-1 ramps; casting onto glass; after degassing"}
+        "compounds": [ {"name":"Poly(amic acid) (PAA)","formula":"N/A","amount_g":"N/A"} ],
+        "solvent": {"name":"N/A","amount_g":"N/A"},
+        "conditions": {"temperature_degC":"80 for 12 h; 100 for 1 h; 200 for 1 h; 300 for 1 h","time_min":"720 (80 ℃), 60 (100 ℃), 60 (200 ℃), 60 (300 ℃)","other":"N2 atmosphere; 2-3 ℃ min-1 ramps; casting onto glass; after degassing"}
       }
     ]
   }
@@ -2369,18 +2382,22 @@ function _renderSynthesisBlock(synthesis, characterization, context) {
         const parts = [];
         parts.push(`<div style="font-weight:700;color:#4c1d95;margin-bottom:3px;">Step ${i+1}: ${esc(st.name || '')}</div>`);
         if (Array.isArray(st.compounds) && st.compounds.length) {
-          const cRows = st.compounds.filter(c => c && c.name).map(c =>
-            `<li><span style="font-weight:600;">${esc(c.name)}</span>${c.formula ? ` <span style="color:var(--gray-400);">(${esc(c.formula)})</span>` : ''}${c.amount && c.amount !== 'N/A' ? ` <span style="color:#6d28d9;">${esc(c.amount)}</span>` : ''}</li>`
-          ).join('');
+          const cRows = st.compounds.filter(c => c && c.name).map(c => {
+            const amt = c.amount_g || c.amount || '';
+            return `<li><span style="font-weight:600;">${esc(c.name)}</span>${c.formula && c.formula !== 'N/A' ? ` <span style="color:var(--gray-400);">(${esc(c.formula)})</span>` : ''}${amt && amt !== 'N/A' ? ` <span style="color:#6d28d9;">${esc(amt)}</span>` : ''}</li>`;
+          }).join('');
           if (cRows) parts.push(`<div style="margin:2px 0;"><span class="paper-synth-label" style="min-width:auto;">化合物</span><ul style="margin:2px 0 2px 16px;padding:0;list-style:disc;">${cRows}</ul></div>`);
         }
         if (st.solvent && st.solvent.name && st.solvent.name !== 'N/A') {
-          const amt = st.solvent.amount && st.solvent.amount !== 'N/A' ? ` (${esc(st.solvent.amount)})` : '';
-          parts.push(`<div class="paper-synth-row"><span class="paper-synth-label">溶媒</span><span class="paper-synth-val">${esc(st.solvent.name)}${amt}</span></div>`);
+          const amt = st.solvent.amount_g || st.solvent.amount || '';
+          const amtTxt = amt && amt !== 'N/A' ? ` (${esc(amt)})` : '';
+          parts.push(`<div class="paper-synth-row"><span class="paper-synth-label">溶媒</span><span class="paper-synth-val">${esc(st.solvent.name)}${amtTxt}</span></div>`);
         }
         const cond = st.conditions || {};
-        if (cond.temperature && cond.temperature !== 'N/A') parts.push(`<div class="paper-synth-row"><span class="paper-synth-label">温度</span><span class="paper-synth-val">${esc(cond.temperature)}</span></div>`);
-        if (cond.time && cond.time !== 'N/A') parts.push(`<div class="paper-synth-row"><span class="paper-synth-label">時間</span><span class="paper-synth-val">${esc(cond.time)}</span></div>`);
+        const temp = cond.temperature_degC || cond.temperature;
+        const time = cond.time_min || cond.time;
+        if (temp && temp !== 'N/A') parts.push(`<div class="paper-synth-row"><span class="paper-synth-label">温度</span><span class="paper-synth-val">${esc(temp)}</span></div>`);
+        if (time && time !== 'N/A') parts.push(`<div class="paper-synth-row"><span class="paper-synth-label">時間</span><span class="paper-synth-val">${esc(time)}</span></div>`);
         if (cond.other && cond.other !== 'N/A') parts.push(`<div class="paper-synth-row"><span class="paper-synth-label">その他</span><span class="paper-synth-val">${esc(cond.other)}</span></div>`);
         rows.push(`<div style="padding:8px 0;border-top:1px dashed #ddd6fe;margin-top:6px;">${parts.join('')}</div>`);
       });
@@ -2416,8 +2433,10 @@ function _formatSynthesisPlain(synthesis, characterization, context) {
         if (!st) return;
         const tokens = [];
         if (st.name) tokens.push(st.name);
-        if (st.conditions?.temperature && st.conditions.temperature !== 'N/A') tokens.push(`${st.conditions.temperature}`);
-        if (st.conditions?.time && st.conditions.time !== 'N/A') tokens.push(`${st.conditions.time}`);
+        const temp = st.conditions?.temperature_degC || st.conditions?.temperature;
+        const time = st.conditions?.time_min || st.conditions?.time;
+        if (temp && temp !== 'N/A') tokens.push(`${temp}`);
+        if (time && time !== 'N/A') tokens.push(`${time}`);
         if (st.solvent?.name && st.solvent.name !== 'N/A') tokens.push(`in ${st.solvent.name}`);
         if (tokens.length) parts.push(`Step${i+1}: ${tokens.join(' / ')}`);
       });
@@ -2443,6 +2462,71 @@ function _num(v) {
   const s = String(v).trim();
   if (!s || /^(null|n\/a|-)$/i.test(s)) return '';
   return s;
+}
+
+const _pdfSamplesById = new Map();
+let _pdfSampleId = 0;
+
+function _buildReactivityJson(sample) {
+  const out = {};
+  let i = 1;
+  for (const c of (sample?.components || [])) {
+    if (!c) continue;
+    const material = (c.polymerDropdown || '').split('|')[0] || 'Other';
+    for (const el of (c.elements || [])) {
+      if (!el || !(el.smiles || el.name)) continue;
+      const entry = {
+        material,
+        Name: el.name || c.name || '',
+        SMILES: el.smiles || '',
+      };
+      const mw = el.mw != null && el.mw !== '' ? el.mw : c.mw;
+      if (mw != null && mw !== '') entry['Molecular weight'] = typeof mw === 'number' ? mw : (isNaN(Number(mw)) ? mw : Number(mw));
+      const mr = el.molarRatio != null && el.molarRatio !== '' ? el.molarRatio : c.molarRatio;
+      if (mr != null && mr !== '') entry['Molar ratio'] = typeof mr === 'number' ? mr : (isNaN(Number(mr)) ? mr : Number(mr));
+      out[`element_#${i}`] = entry;
+      i++;
+    }
+  }
+  return out;
+}
+
+function _buildMethodJson(sample) {
+  const steps = (sample?.synthesis?.steps || []).map(st => {
+    if (!st) return null;
+    return {
+      name: st.name || '',
+      compounds: (st.compounds || []).map(c => ({
+        name: c?.name || '',
+        formula: c?.formula || 'N/A',
+        amount_g: c?.amount_g != null ? c.amount_g : (c?.amount != null ? c.amount : 'N/A'),
+      })),
+      solvent: {
+        name: st.solvent?.name || 'N/A',
+        amount_g: st.solvent?.amount_g != null ? st.solvent.amount_g : (st.solvent?.amount != null ? st.solvent.amount : 'N/A'),
+      },
+      conditions: {
+        temperature_degC: st.conditions?.temperature_degC != null ? st.conditions.temperature_degC : (st.conditions?.temperature != null ? st.conditions.temperature : 'N/A'),
+        time_min: st.conditions?.time_min != null ? st.conditions.time_min : (st.conditions?.time != null ? st.conditions.time : 'N/A'),
+        other: st.conditions?.other || 'N/A',
+      },
+    };
+  }).filter(Boolean);
+  return [{ steps }];
+}
+
+async function copySampleField(sid, field, btn) {
+  const sample = _pdfSamplesById.get(sid);
+  if (!sample) return;
+  const obj = field === 'reactivity' ? _buildReactivityJson(sample) : _buildMethodJson(sample);
+  const txt = JSON.stringify(obj, null, 2);
+  try {
+    await navigator.clipboard.writeText(txt);
+    const orig = btn.textContent;
+    btn.classList.add('ok');
+    btn.textContent = '✓ コピー済';
+    setTimeout(() => { btn.classList.remove('ok'); btn.textContent = orig; }, 1500);
+  } catch (e) { alert('コピー失敗: ' + e.message); }
 }
 
 function _renderSampleCard(sample, idx) {
@@ -2496,6 +2580,11 @@ function _renderSampleCard(sample, idx) {
     ? `<div class="sample-synth-toggle" onclick="this.parentElement.classList.toggle('open')">▾ 合成条件・物性を表示</div>${synthHtml}`
     : '';
 
+  const sid = ++_pdfSampleId;
+  _pdfSamplesById.set(sid, sample);
+  const hasReactivity = (sample?.components || []).some(c => (c?.elements || []).some(e => e && (e.smiles || e.name)));
+  const hasMethod = Array.isArray(sample?.synthesis?.steps) && sample.synthesis.steps.length > 0;
+
   return `
     <div class="sample-card">
       <div class="sample-card-header">
@@ -2515,6 +2604,12 @@ function _renderSampleCard(sample, idx) {
           <thead><tr><th>type</th><th>name</th><th></th><th>MW</th><th>wt ratio</th><th>mol ratio</th></tr></thead>
           <tbody>${addRows}</tbody>
         </table>` : ''}
+      ${(hasReactivity || hasMethod) ? `
+        <div class="sample-copy-bar">
+          <span style="font-size:11px;color:var(--gray-500);align-self:center;">Excel 貼付用 JSON:</span>
+          ${hasReactivity ? `<button class="sample-copy-btn" onclick="copySampleField(${sid},'reactivity',this)">📋 Reactivity</button>` : ''}
+          ${hasMethod ? `<button class="sample-copy-btn" onclick="copySampleField(${sid},'method',this)">📋 Method</button>` : ''}
+        </div>` : ''}
       ${toggleHtml}
     </div>`;
 }
@@ -2524,6 +2619,8 @@ function _renderPaperAnalysis(parsed, filename) {
   const itemsEl = document.getElementById('pdf-items');
   const info = parsed.paperInfo || {};
   const samples = Array.isArray(parsed.samples) ? parsed.samples : [];
+  _pdfSamplesById.clear();
+  _pdfSampleId = 0;
 
   metaEl.innerHTML = `
     <div class="paper-meta">
