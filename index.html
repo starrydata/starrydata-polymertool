@@ -2745,14 +2745,15 @@ function _isEditableTarget(el) {
   return false;
 }
 function _onPaste(e) {
-  // input / textarea にフォーカスがある時はテキスト貼り付けを優先し、
-  // クリップボード内の画像には触らない（ユーザが意図せず画像認識を起動するのを防ぐ）
-  if (_isEditableTarget(document.activeElement) || _isEditableTarget(e.target)) return;
   const file = _extractImageFromClipboardEvent(e);
-  if (file) {
-    e.preventDefault();
-    handleImageFile(file);
-  }
+  if (!file) return; // 画像が無ければテキスト貼り付けをそのまま通す
+  // クリップボードに「意味あるテキスト」も同居している場合のみ、editable フォーカス中は譲る
+  // (Mac スクショは image のみなのでそのまま画像認識が走る)
+  const types = Array.from(e.clipboardData?.types || []);
+  const hasPlainText = types.includes('text/plain');
+  if (hasPlainText && _isEditableTarget(document.activeElement)) return;
+  e.preventDefault();
+  handleImageFile(file);
 }
 document.addEventListener('paste', _onPaste);
 window.addEventListener('paste', _onPaste);
