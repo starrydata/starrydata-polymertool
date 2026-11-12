@@ -8,10 +8,11 @@ You are free to share and adapt this data for any purpose, including
 commercial use, provided that appropriate credit is given.
 
 Suggested citation:
-    starrydata contributors, starrydata-polymertool polymer database,
+    starrydata contributors / National Institute for Materials Science (NIMS),
+    starrydata-polymertool polymer database,
     https://github.com/starrydata/starrydata-polymertool
 
-Copyright (c) 2026 starrydata contributors
+Copyright (c) 2026 starrydata contributors / National Institute for Materials Science (NIMS)
 
 The source code of the tool itself (index.html, build/parse scripts, etc.)
 is licensed separately under the MIT License. See ../LICENSE for details.
