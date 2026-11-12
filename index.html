@@ -60,7 +60,29 @@ body {
 }
 
 /* ─── Layout ─── */
-.main { max-width: 1600px; margin: 0 auto; padding: 20px 16px 60px; }
+.main { max-width: 1600px; margin: 0 auto; padding: 20px 16px 24px; }
+.app-footer {
+  border-top: 1px solid var(--gray-200);
+  background: #f8fafc;
+  padding: 14px 16px;
+  margin-top: 20px;
+}
+.app-footer .footer-inner {
+  max-width: 1600px;
+  margin: 0 auto;
+  font-size: 11.5px;
+  color: var(--gray-500);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.app-footer a {
+  color: #2563eb;
+  text-decoration: none;
+}
+.app-footer a:hover { text-decoration: underline; }
+.app-footer .footer-sep { color: var(--gray-300); }
 .workspace-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1074,6 +1096,20 @@ pre.json-pre {
     </div>
   </div>
 </div>
+
+<footer class="app-footer">
+  <div class="footer-inner">
+    <span>© 2026 starrydata</span>
+    <span class="footer-sep">|</span>
+    <a href="https://github.com/starrydata/starrydata-polymertool" target="_blank" rel="noopener">GitHub</a>
+    <span class="footer-sep">|</span>
+    <span>Code: <a href="https://github.com/starrydata/starrydata-polymertool/blob/main/LICENSE" target="_blank" rel="noopener">MIT</a></span>
+    <span class="footer-sep">|</span>
+    <span>Data: <a href="https://github.com/starrydata/starrydata-polymertool/blob/main/polymer_db/LICENSE-DATA" target="_blank" rel="noopener">CC BY 4.0</a></span>
+    <span class="footer-sep">|</span>
+    <a href="https://github.com/starrydata/starrydata-polymertool/issues/new?template=add-polymer.yml" target="_blank" rel="noopener">📥 DB 追加リクエスト</a>
+  </div>
+</footer>
 
 <script src="polymer_db.js"></script>
 <script>
