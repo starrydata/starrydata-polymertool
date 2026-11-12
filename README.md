@@ -1,5 +1,8 @@
 # starrydata-polymertool
 
+[![License: MIT](https://img.shields.io/badge/code-MIT-blue.svg)](LICENSE)
+[![Data: CC BY 4.0](https://img.shields.io/badge/data-CC%20BY%204.0-lightgrey.svg)](polymer_db/LICENSE-DATA)
+
 高分子論文からポリマー組成・合成条件を抽出し、Starrydata2 の登録 Excel に貼り付けられる JSON を生成するツール。
 GitHub Pages: <https://starrydata.github.io/starrydata-polymertool/>
 
@@ -249,6 +252,23 @@ Actions 失敗時は Issue にエラーログ URL がコメントで自動投稿
 | キャッシュ削除で消える | ○ | × |
 
 一度きりならセッション、繰り返し使うなら DB 登録。
+
+## ライセンス
+
+本リポジトリは **2 系統のライセンス** を併用しています:
+
+| 対象 | ライセンス | ファイル |
+|---|---|---|
+| ソースコード (`index.html`、`.github/scripts/`、`.github/workflows/`、`.github/ISSUE_TEMPLATE/`、`README.md` 等) | **MIT License** | [`LICENSE`](LICENSE) |
+| ポリマーデータベース (`polymer_db/**/*.json` および自動生成の `polymer_db.js`) | **Creative Commons Attribution 4.0 International (CC BY 4.0)** | [`polymer_db/LICENSE-DATA`](polymer_db/LICENSE-DATA) |
+
+**フォーク・社内利用**: MIT / CC BY 4.0 のどちらも商用利用可能、改変可能です。著作権表示を残していただければ社内 Enterprise への fork、改変、派生物の作成に制限はありません。
+
+**DB データの引用時**:
+```
+starrydata contributors, starrydata-polymertool polymer database,
+https://github.com/starrydata/starrydata-polymertool
+```
 
 ## Gemini 利用上の注意
 
