@@ -266,9 +266,12 @@ Actions 失敗時は Issue にエラーログ URL がコメントで自動投稿
 
 **フォーク・社内利用**: MIT / CC BY 4.0 のどちらも商用利用可能、改変可能です。著作権表示を残していただければ社内 Enterprise への fork、改変、派生物の作成に制限はありません。
 
+**メンテナンス**: [National Institute for Materials Science (NIMS)](https://www.nims.go.jp/) / Starrydata プロジェクト
+
 **DB データの引用時**:
 ```
-starrydata contributors, starrydata-polymertool polymer database,
+starrydata contributors / National Institute for Materials Science (NIMS),
+starrydata-polymertool polymer database,
 https://github.com/starrydata/starrydata-polymertool
 ```
 
