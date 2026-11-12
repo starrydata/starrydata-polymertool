@@ -12,12 +12,6 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
 
-Note: The MIT License above covers source code (index.html, scripts under
-.github/, README, etc.). The polymer database (JSON files under polymer_db/
-and the auto-generated polymer_db.js) is licensed separately under
-Creative Commons Attribution 4.0 International (CC BY 4.0). See
-polymer_db/LICENSE-DATA for details.
-
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
