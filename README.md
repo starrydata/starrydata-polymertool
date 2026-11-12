@@ -262,6 +262,8 @@ Actions 失敗時は Issue にエラーログ URL がコメントで自動投稿
 | ソースコード (`index.html`、`.github/scripts/`、`.github/workflows/`、`.github/ISSUE_TEMPLATE/`、`README.md` 等) | **MIT License** | [`LICENSE`](LICENSE) |
 | ポリマーデータベース (`polymer_db/**/*.json` および自動生成の `polymer_db.js`) | **Creative Commons Attribution 4.0 International (CC BY 4.0)** | [`polymer_db/LICENSE-DATA`](polymer_db/LICENSE-DATA) |
 
+`LICENSE` 自体は純粋な MIT 本文 (GitHub の自動判定が「MIT」になる形式) で、データ側の併記説明はこの README に寄せています。
+
 **フォーク・社内利用**: MIT / CC BY 4.0 のどちらも商用利用可能、改変可能です。著作権表示を残していただければ社内 Enterprise への fork、改変、派生物の作成に制限はありません。
 
 **DB データの引用時**:
