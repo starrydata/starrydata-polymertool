@@ -3799,14 +3799,14 @@ Rules:
     return smiles;
   }
 
+  // 精度優先: 化学構造式専用モデル → 専用モデル → 汎用 LLM
   const labeled = [
-    { label: 'Gemini Vision API', fn: tryGemini },
     { label: 'MolScribe (自前)',   fn: tryMolScribe },
     { label: 'HF Inference API',  fn: tryHFInference },
+    { label: 'Gemini Vision API', fn: tryGemini },
   ];
 
-  const geminiKey = localStorage.getItem(_GEMINI_KEY_KEY);
-  _stat(geminiKey ? '① Gemini Vision API に送信中…' : '① Gemini キー未設定 → スキップ', '');
+  _stat('① MolScribe (自前 HF Space) に送信中…', '');
   await new Promise(r => setTimeout(r, 200));
 
   const errs = [];
