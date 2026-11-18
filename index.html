@@ -1257,6 +1257,12 @@ pre.json-pre {
         <button class="hf-clear-btn" onclick="clearHFToken()">削除</button>
         <span id="hf-token-status"></span>
       </div>
+      <div style="font-size:11px;color:var(--gray-500);padding:4px 10px 2px;line-height:1.4;">
+        <b>HF Token を設定すると</b>:
+        MolScribe の ZeroGPU クォータが大幅増 (匿名 180s/window → 認証 300-1500s/日) + DECIMER 有効化。
+        <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener" style="color:var(--blue-mid);">huggingface.co/settings/tokens</a>
+        で read 権限の token を発行してください (ブラウザから直接貼り付け、どこにも送信されません)。
+      </div>
     </div>
     <!-- 認識スロット (複数画像を同時に保持) -->
     <div id="slots-section">
@@ -3639,16 +3645,18 @@ async function warmupMolScribe(opts) {
   _warmupInFlight = (async () => {
     try {
       onStatus('🔥 MolScribe ウォームアップ中…', 'warn');
+      const hfToken = localStorage.getItem(_HF_TOKEN_KEY);
+      const authHeaders = hfToken ? { 'Authorization': `Bearer ${hfToken}` } : {};
       const blob = await _buildWarmupBlob();
       const fd = new FormData();
       fd.append('files', blob, 'warmup.png');
-      const upRes = await fetch(`${_MOLSCRIBE_SPACE}/gradio_api/upload`, { method: 'POST', body: fd });
+      const upRes = await fetch(`${_MOLSCRIBE_SPACE}/gradio_api/upload`, { method: 'POST', body: fd, headers: authHeaders });
       if (!upRes.ok) throw new Error(`upload ${upRes.status}`);
       const paths = await upRes.json();
       if (!Array.isArray(paths) || !paths[0]) throw new Error('upload: path 空');
 
       const callRes = await fetch(`${_MOLSCRIBE_SPACE}/gradio_api/call/predict`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({ data: [{ path: paths[0], meta: { _type: 'gradio.FileData' } }] })
       });
       if (!callRes.ok) throw new Error(`call ${callRes.status}`);
@@ -3657,9 +3665,14 @@ async function warmupMolScribe(opts) {
       if (!eventId) throw new Error('event_id 取得失敗');
 
       // SSE 完了まで待つ (GPU 割当 + モデルロードを確実に促すため)
-      const resRes = await fetch(`${_MOLSCRIBE_SPACE}/gradio_api/call/predict/${eventId}`);
+      const resRes = await fetch(`${_MOLSCRIBE_SPACE}/gradio_api/call/predict/${eventId}`, { headers: authHeaders });
       if (!resRes.ok) throw new Error(`result ${resRes.status}`);
-      await resRes.text();
+      const sseText = await resRes.text();
+      // quota 超過エラーの場合は呼び出し側に伝えて UI に出す
+      if (/ZeroGPU quota exceeded|exceeded your.*quota/i.test(sseText)) {
+        const kind = hfToken ? '(認証済だがクォータ超過)' : '(匿名クォータ 180s 超過、HF Token 設定で増枠)';
+        throw new Error('ZeroGPU quota ' + kind);
+      }
       const dt = Math.floor((Date.now() - now) / 1000);
       onStatus(`✓ MolScribe 準備完了 (${dt}s)`, 'ok');
       console.log('[molscribe-warmup] ready in', dt, 's');
@@ -3894,11 +3907,16 @@ Rules:
     for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
     const blob = new Blob([arr], { type: mime });
 
+    // HF Token があれば ZeroGPU クォータ増枠のため Authorization を付ける
+    // (未設定だと 180s/window の匿名クォータで即詰まる)
+    const hfToken = localStorage.getItem(_HF_TOKEN_KEY);
+    const authHeaders = hfToken ? { 'Authorization': `Bearer ${hfToken}` } : {};
+
     // 1. アップロード
     _stat('MolScribe: 画像アップロード中…', '');
     const fd = new FormData();
     fd.append('files', blob, 'image.png');
-    const upRes = await fetch(`${_MOLSCRIBE_SPACE}/gradio_api/upload`, { method: 'POST', body: fd });
+    const upRes = await fetch(`${_MOLSCRIBE_SPACE}/gradio_api/upload`, { method: 'POST', body: fd, headers: authHeaders });
     if (!upRes.ok) throw new Error(`upload ${upRes.status}`);
     const paths = await upRes.json();
     if (!Array.isArray(paths) || !paths[0]) throw new Error('upload: path 空');
@@ -3907,7 +3925,7 @@ Rules:
     _stat('MolScribe: 推論ジョブ投入中…', '');
     const callRes = await fetch(`${_MOLSCRIBE_SPACE}/gradio_api/call/predict`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ data: [{ path: paths[0], meta: { _type: 'gradio.FileData' } }] })
     });
     if (!callRes.ok) throw new Error(`call ${callRes.status}`);
@@ -3923,7 +3941,7 @@ Rules:
     // 最大 3 回まで SSE 再接続 (Gradio が queued 状態で早期に接続を切ることがあるため)
     let completeData = null, errorData = null, lastSseText = '';
     for (let attempt = 0; attempt < 3; attempt++) {
-      const resRes = await fetch(`${_MOLSCRIBE_SPACE}/gradio_api/call/predict/${eventId}`);
+      const resRes = await fetch(`${_MOLSCRIBE_SPACE}/gradio_api/call/predict/${eventId}`, { headers: authHeaders });
       if (!resRes.ok) throw new Error(`result ${resRes.status} (attempt ${attempt+1}/3)`);
       const sseText = await resRes.text();
       lastSseText = sseText;
