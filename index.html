@@ -877,11 +877,116 @@ pre.json-pre {
 }
 #pdf-fig-zoom.open { display: flex; }
 #pdf-fig-zoom img { max-width: 90vw; max-height: 90vh; background: white; border-radius: 6px; }
-#psearch-img-preview {
-  display: none; align-items: center; gap: 10px;
-  padding: 8px 14px; background: #fffbeb; border-bottom: 1px solid #fde68a;
+/* ── 認識スロット ── */
+#slots-section {
+  padding: 8px 10px 10px;
+  border-bottom: 1px solid var(--gray-200);
+  background: #fffdfa;
 }
-#psearch-img-preview img { max-height: 72px; max-width: 140px; border-radius: 4px; border: 1px solid #fde68a; object-fit: contain; }
+.slots-header {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px;
+}
+.slots-hint { font-weight: 400; color: var(--gray-400); font-size: 11px; margin-left: 8px; }
+.slots-controls { display: flex; gap: 4px; }
+.slots-controls button {
+  width: 24px; height: 24px; border: 1px solid var(--gray-200); background: white;
+  border-radius: 4px; font-size: 12px; cursor: pointer; color: var(--gray-600);
+}
+.slots-controls button:hover { background: var(--blue-light); border-color: var(--blue-mid); color: var(--blue-mid); }
+.slots-container {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 6px;
+}
+.slot-card {
+  background: white; border: 2px solid var(--gray-200); border-radius: 6px;
+  padding: 6px; display: flex; flex-direction: column; gap: 4px;
+  cursor: pointer; min-height: 160px; position: relative;
+  transition: border-color .15s, box-shadow .15s;
+}
+.slot-card:hover { border-color: #93c5fd; }
+.slot-card.active { border-color: var(--blue-mid); box-shadow: 0 0 0 2px var(--blue-light); }
+.slot-card.has-image { background: #fafbfc; }
+.slot-card .slot-num {
+  position: absolute; top: 4px; left: 6px; font-size: 10px;
+  background: var(--gray-200); color: var(--gray-600); border-radius: 3px;
+  padding: 1px 5px; font-weight: 600; z-index: 1;
+}
+.slot-card.active .slot-num { background: var(--blue-mid); color: white; }
+.slot-card .slot-close {
+  position: absolute; top: 2px; right: 2px; width: 20px; height: 20px;
+  border: none; background: transparent; cursor: pointer; font-size: 14px;
+  color: var(--gray-400); border-radius: 3px; display: none; z-index: 1;
+}
+.slot-card.has-image .slot-close { display: block; }
+.slot-card .slot-close:hover { background: var(--red-light); color: var(--red); }
+.slot-card .slot-img-wrap {
+  height: 80px; display: flex; align-items: center; justify-content: center;
+  background: #fafafa; border-radius: 3px; overflow: hidden;
+}
+.slot-card .slot-img-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.slot-card .slot-empty {
+  color: var(--gray-400); font-size: 11px; text-align: center;
+  padding: 20px 4px 4px; line-height: 1.4;
+}
+.slot-card .slot-status { font-size: 10px; color: var(--gray-500); line-height: 1.3; min-height: 12px; word-break: break-all; }
+.slot-card .slot-status.ok { color: #166534; }
+.slot-card .slot-status.err { color: var(--red); }
+.slot-card .slot-status.warn { color: #d97706; }
+.slot-card .slot-smiles {
+  font-family: var(--mono); font-size: 10px; background: #f8fafc;
+  border: 1px solid #e2e8f0; border-radius: 3px; padding: 3px 5px;
+  word-break: break-all; line-height: 1.3; max-height: 50px; overflow-y: auto;
+}
+.slot-card .slot-btns {
+  display: flex; gap: 3px; margin-top: 2px;
+}
+.slot-card .slot-btns button {
+  flex: 1; font-size: 10px; padding: 3px 4px; border: 1px solid var(--gray-200);
+  background: white; border-radius: 3px; cursor: pointer;
+}
+.slot-card .slot-btns button:hover { background: var(--blue-light); border-color: var(--blue-mid); color: var(--blue-mid); }
+
+/* ── クロップモーダル ── */
+#pdf-fig-zoom {
+  flex-direction: column; gap: 8px;
+}
+#pdf-fig-zoom .crop-wrap {
+  position: relative; display: inline-block; max-width: 90vw; max-height: 78vh;
+  background: white; border-radius: 6px; overflow: hidden; user-select: none;
+}
+#pdf-fig-zoom .crop-wrap img {
+  display: block; max-width: 90vw; max-height: 78vh;
+  pointer-events: none;
+}
+#pdf-fig-zoom .crop-rect {
+  position: absolute; border: 2px dashed #1d4ed8;
+  background: rgba(59, 130, 246, 0.12); cursor: move;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+}
+#pdf-fig-zoom .crop-handle {
+  position: absolute; width: 10px; height: 10px; background: white;
+  border: 1px solid #1d4ed8; border-radius: 2px;
+}
+#pdf-fig-zoom .crop-handle.nw { top: -6px; left: -6px; cursor: nwse-resize; }
+#pdf-fig-zoom .crop-handle.ne { top: -6px; right: -6px; cursor: nesw-resize; }
+#pdf-fig-zoom .crop-handle.sw { bottom: -6px; left: -6px; cursor: nesw-resize; }
+#pdf-fig-zoom .crop-handle.se { bottom: -6px; right: -6px; cursor: nwse-resize; }
+#pdf-fig-zoom .crop-toolbar {
+  display: flex; gap: 8px; background: white; padding: 10px 14px;
+  border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.3); flex-wrap: wrap;
+  align-items: center; justify-content: center;
+}
+#pdf-fig-zoom .crop-toolbar button {
+  font-size: 12px; padding: 6px 12px; border: 1px solid var(--gray-200);
+  background: white; border-radius: 4px; cursor: pointer; white-space: nowrap;
+}
+#pdf-fig-zoom .crop-toolbar button.primary {
+  background: var(--blue-mid); color: white; border-color: var(--blue-mid);
+}
+#pdf-fig-zoom .crop-toolbar button.primary:hover { background: var(--blue-dark); }
+#pdf-fig-zoom .crop-toolbar button:not(.primary):hover { background: var(--blue-light); border-color: var(--blue-mid); }
+#pdf-fig-zoom .crop-hint { font-size: 11px; color: var(--gray-500); align-self: center; }
 #decimer-status { font-size: 12px; color: var(--gray-400); flex: 1; }
 #hf-settings-bar {
   display: none; flex-direction: column; gap: 6px;
@@ -1135,7 +1240,17 @@ pre.json-pre {
         <span id="hf-token-status"></span>
       </div>
     </div>
-    <div id="psearch-img-preview"></div>
+    <!-- 認識スロット (複数画像を同時に保持) -->
+    <div id="slots-section">
+      <div class="slots-header">
+        <span>🧩 認識スロット <span id="slots-active-hint" class="slots-hint">クリックで ⌘V の投入先を切替</span></span>
+        <div class="slots-controls">
+          <button id="slots-add-btn" onclick="addSlot()" title="スロット追加">＋</button>
+          <button id="slots-clear-btn" onclick="clearAllSlots()" title="全スロット消去">🗑</button>
+        </div>
+      </div>
+      <div id="slots-container" class="slots-container"></div>
+    </div>
     <div id="psearch-results"></div>
   </div>
 
@@ -2136,8 +2251,6 @@ function clearPolymerSearch() {
   ++_searchSeq;
   document.getElementById('psearch-input').value = '';
   document.getElementById('psearch-results').innerHTML = '';
-  const preview = document.getElementById('psearch-img-preview');
-  preview.style.display = 'none'; preview.innerHTML = '';
   const fi = document.getElementById('imgSearchInput');
   if (fi) fi.value = '';
   document.getElementById('psearch-panel').classList.remove('drag-over');
@@ -2394,16 +2507,7 @@ function _renderPdfFigures(images) {
 function _zoomPdfFig(idx) {
   const img = _pdfFiguresCache[idx];
   if (!img) return;
-  let modal = document.getElementById('pdf-fig-zoom');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'pdf-fig-zoom';
-    modal.innerHTML = '<img>';
-    modal.addEventListener('click', () => modal.classList.remove('open'));
-    document.body.appendChild(modal);
-  }
-  modal.querySelector('img').src = img.dataUrl;
-  modal.classList.add('open');
+  _openCropModal(img.dataUrl, `p${img.page}_${img.idx}`);
 }
 
 async function _recognizePdfFig(idx) {
@@ -2413,6 +2517,198 @@ async function _recognizePdfFig(idx) {
   const blob = await res.blob();
   const file = new File([blob], `p${img.page}_${img.idx}.png`, { type: 'image/png' });
   handleImageFile(file);
+}
+
+// ===== クロップモーダル (範囲指定 → スロット投入 or クリップボード) =====
+let _cropState = null;
+
+function _openCropModal(dataUrl, baseName) {
+  let modal = document.getElementById('pdf-fig-zoom');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'pdf-fig-zoom';
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) _closeCropModal(); });
+  }
+  modal.innerHTML = `
+    <div class="crop-wrap" id="crop-wrap">
+      <img id="crop-img" src="${dataUrl}" alt="crop target">
+      <div class="crop-rect" id="crop-rect" style="display:none;">
+        <div class="crop-handle nw" data-h="nw"></div>
+        <div class="crop-handle ne" data-h="ne"></div>
+        <div class="crop-handle sw" data-h="sw"></div>
+        <div class="crop-handle se" data-h="se"></div>
+      </div>
+    </div>
+    <div class="crop-toolbar">
+      <span class="crop-hint">ドラッグで範囲選択 · クリックで全体解除</span>
+      <button type="button" onclick="_cropResetFull()">全体</button>
+      <button type="button" onclick="_cropCopyToClipboard()">📋 クリップボード</button>
+      <button type="button" class="primary" onclick="_cropSendToSlot()">✂ スロットへ送る</button>
+      <button type="button" onclick="_closeCropModal()">閉じる</button>
+    </div>`;
+  modal.classList.add('open');
+
+  const wrap = document.getElementById('crop-wrap');
+  const imgEl = document.getElementById('crop-img');
+  _cropState = {
+    baseName: baseName || 'crop',
+    imgEl, wrap,
+    rect: null, // {x, y, w, h} in displayed image CSS pixels (relative to wrap top-left)
+    dragging: null, // {mode: 'new'|'move'|'resize', handle, startX, startY, startRect}
+  };
+  // 画像が読み込まれてからオーバーレイイベントを装着
+  if (imgEl.complete) _bindCropEvents();
+  else imgEl.addEventListener('load', _bindCropEvents, { once: true });
+}
+
+function _closeCropModal() {
+  const modal = document.getElementById('pdf-fig-zoom');
+  if (modal) modal.classList.remove('open');
+  _cropState = null;
+}
+
+function _bindCropEvents() {
+  const { wrap } = _cropState;
+  wrap.addEventListener('mousedown', _cropOnMouseDown);
+  window.addEventListener('mousemove', _cropOnMouseMove);
+  window.addEventListener('mouseup', _cropOnMouseUp);
+}
+
+function _cropLocalPos(e) {
+  const r = _cropState.wrap.getBoundingClientRect();
+  return { x: Math.max(0, Math.min(r.width,  e.clientX - r.left)),
+           y: Math.max(0, Math.min(r.height, e.clientY - r.top)) };
+}
+
+function _cropOnMouseDown(e) {
+  if (!_cropState) return;
+  const handle = e.target.closest('.crop-handle');
+  const rect = _cropState.rect;
+  if (handle && rect) {
+    e.preventDefault();
+    const p = _cropLocalPos(e);
+    _cropState.dragging = { mode: 'resize', handle: handle.dataset.h, startX: p.x, startY: p.y, startRect: { ...rect } };
+    return;
+  }
+  // rect 内クリック → 移動
+  if (rect && e.target.id === 'crop-rect') {
+    e.preventDefault();
+    const p = _cropLocalPos(e);
+    _cropState.dragging = { mode: 'move', startX: p.x, startY: p.y, startRect: { ...rect } };
+    return;
+  }
+  // それ以外 → 新規矩形
+  if (e.target === _cropState.wrap || e.target.id === 'crop-img') {
+    e.preventDefault();
+    const p = _cropLocalPos(e);
+    _cropState.rect = { x: p.x, y: p.y, w: 0, h: 0 };
+    _cropState.dragging = { mode: 'new', startX: p.x, startY: p.y };
+    _cropRender();
+  }
+}
+
+function _cropOnMouseMove(e) {
+  if (!_cropState || !_cropState.dragging) return;
+  const p = _cropLocalPos(e);
+  const d = _cropState.dragging;
+  if (d.mode === 'new') {
+    _cropState.rect = _cropNormalize(d.startX, d.startY, p.x, p.y);
+  } else if (d.mode === 'move') {
+    const r = _cropState.wrap.getBoundingClientRect();
+    const dx = p.x - d.startX, dy = p.y - d.startY;
+    let nx = Math.max(0, Math.min(r.width  - d.startRect.w, d.startRect.x + dx));
+    let ny = Math.max(0, Math.min(r.height - d.startRect.h, d.startRect.y + dy));
+    _cropState.rect = { x: nx, y: ny, w: d.startRect.w, h: d.startRect.h };
+  } else if (d.mode === 'resize') {
+    const s = d.startRect;
+    let x1 = s.x, y1 = s.y, x2 = s.x + s.w, y2 = s.y + s.h;
+    if (d.handle.includes('n')) y1 = p.y;
+    if (d.handle.includes('s')) y2 = p.y;
+    if (d.handle.includes('w')) x1 = p.x;
+    if (d.handle.includes('e')) x2 = p.x;
+    _cropState.rect = _cropNormalize(x1, y1, x2, y2);
+  }
+  _cropRender();
+}
+
+function _cropOnMouseUp() {
+  if (!_cropState) return;
+  if (_cropState.dragging && _cropState.dragging.mode === 'new') {
+    const r = _cropState.rect;
+    if (!r || r.w < 10 || r.h < 10) { _cropState.rect = null; _cropRender(); }
+  }
+  _cropState.dragging = null;
+}
+
+function _cropNormalize(x1, y1, x2, y2) {
+  return {
+    x: Math.min(x1, x2), y: Math.min(y1, y2),
+    w: Math.abs(x2 - x1), h: Math.abs(y2 - y1),
+  };
+}
+
+function _cropRender() {
+  if (!_cropState) return;
+  const rectEl = document.getElementById('crop-rect');
+  if (!rectEl) return;
+  const r = _cropState.rect;
+  if (!r || r.w <= 0 || r.h <= 0) { rectEl.style.display = 'none'; return; }
+  rectEl.style.display = 'block';
+  rectEl.style.left = r.x + 'px';
+  rectEl.style.top = r.y + 'px';
+  rectEl.style.width = r.w + 'px';
+  rectEl.style.height = r.h + 'px';
+}
+
+function _cropResetFull() {
+  if (!_cropState) return;
+  _cropState.rect = null;
+  _cropRender();
+}
+
+// 表示座標 → 元画像の naturalWidth / Height にスケール変換して canvas で切り出し
+async function _cropExtractBlob() {
+  if (!_cropState) return null;
+  const img = _cropState.imgEl;
+  const rect = _cropState.rect;
+  const sx = img.naturalWidth / img.clientWidth;
+  const sy = img.naturalHeight / img.clientHeight;
+  let cx, cy, cw, ch;
+  if (rect && rect.w > 0 && rect.h > 0) {
+    cx = rect.x * sx; cy = rect.y * sy; cw = rect.w * sx; ch = rect.h * sy;
+  } else {
+    cx = 0; cy = 0; cw = img.naturalWidth; ch = img.naturalHeight;
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(cw));
+  canvas.height = Math.max(1, Math.round(ch));
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, cx, cy, cw, ch, 0, 0, canvas.width, canvas.height);
+  return await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+}
+
+async function _cropSendToSlot() {
+  if (!_cropState) return;
+  const blob = await _cropExtractBlob();
+  if (!blob) return;
+  const baseName = _cropState.baseName;
+  _closeCropModal();
+  const file = new File([blob], `${baseName}_crop.png`, { type: 'image/png' });
+  handleImageFile(file);
+}
+
+async function _cropCopyToClipboard() {
+  if (!_cropState) return;
+  const blob = await _cropExtractBlob();
+  if (!blob) return;
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    const tb = document.querySelector('#pdf-fig-zoom .crop-hint');
+    if (tb) { const prev = tb.textContent; tb.textContent = '✓ クリップボードにコピーしました'; setTimeout(() => { if (tb) tb.textContent = prev; }, 1500); }
+  } catch (e) {
+    alert('クリップボードへのコピーに失敗: ' + (e.message || e));
+  }
 }
 
 function _fileToBase64(file) {
@@ -3107,6 +3403,167 @@ function _renderPaperAnalysis(parsed, filename) {
 }
 
 // =============================================
+// 認識スロット (複数画像の同時保持)
+// =============================================
+const _SLOT_COUNT_KEY = 'polymertool.slotCount';
+const _SLOT_MIN = 4;
+const _SLOT_MAX = 12;
+let _slotCount = Math.max(_SLOT_MIN, Math.min(_SLOT_MAX,
+  parseInt(localStorage.getItem(_SLOT_COUNT_KEY) || '6') || 6));
+let _activeSlotIdx = null;
+// 各スロット: { imageUrl, status: 'idle'|'running'|'ok'|'err', statusMsg, statusClass, smiles, source }
+const _slots = Array.from({ length: _slotCount }, () => ({ imageUrl: null, status: 'idle', statusMsg: '', statusClass: '', smiles: '', source: '' }));
+
+function _ensureSlotCapacity(n) {
+  while (_slots.length < n && _slots.length < _SLOT_MAX) {
+    _slots.push({ imageUrl: null, status: 'idle', statusMsg: '', statusClass: '', smiles: '', source: '' });
+  }
+  _slotCount = _slots.length;
+  localStorage.setItem(_SLOT_COUNT_KEY, String(_slotCount));
+}
+
+function addSlot() {
+  if (_slots.length >= _SLOT_MAX) return;
+  _slots.push({ imageUrl: null, status: 'idle', statusMsg: '', statusClass: '', smiles: '', source: '' });
+  _slotCount = _slots.length;
+  localStorage.setItem(_SLOT_COUNT_KEY, String(_slotCount));
+  renderSlots();
+}
+
+function clearSlot(idx) {
+  if (!_slots[idx]) return;
+  _slots[idx] = { imageUrl: null, status: 'idle', statusMsg: '', statusClass: '', smiles: '', source: '' };
+  if (_activeSlotIdx === idx) _activeSlotIdx = null;
+  renderSlots();
+}
+
+function clearAllSlots() {
+  for (let i = 0; i < _slots.length; i++) {
+    _slots[i] = { imageUrl: null, status: 'idle', statusMsg: '', statusClass: '', smiles: '', source: '' };
+  }
+  _activeSlotIdx = null;
+  renderSlots();
+}
+
+function activateSlot(idx) {
+  if (idx < 0 || idx >= _slots.length) return;
+  _activeSlotIdx = idx;
+  renderSlots();
+}
+
+function findNextEmptySlot() {
+  for (let i = 0; i < _slots.length; i++) if (!_slots[i].imageUrl) return i;
+  // すべて埋まっていれば FIFO で先頭を押し出し
+  return 0;
+}
+
+function _slotTargetForPaste() {
+  // active スロットが設定されていれば常にそこへ (上書き含む)。
+  // 未選択なら最初の空きスロット、全部埋まっていれば FIFO で先頭を押し出し。
+  if (_activeSlotIdx != null && _slots[_activeSlotIdx]) return _activeSlotIdx;
+  return findNextEmptySlot();
+}
+
+function renderSlots() {
+  const c = document.getElementById('slots-container');
+  if (!c) return;
+  c.innerHTML = _slots.map((s, i) => {
+    const activeCls = _activeSlotIdx === i ? 'active' : '';
+    const hasImg = s.imageUrl ? 'has-image' : '';
+    const statusCls = s.statusClass || '';
+    const imgBlock = s.imageUrl
+      ? `<div class="slot-img-wrap"><img src="${s.imageUrl}" alt="slot ${i+1}"></div>`
+      : `<div class="slot-empty">画像をドロップ / ⌘V<br>または PDF 画像の 🔍 認識</div>`;
+    const statusBlock = s.imageUrl ? `<div class="slot-status ${statusCls}">${esc(s.statusMsg || '')}</div>` : '';
+    const smilesBlock = (s.smiles)
+      ? `<div class="slot-smiles" title="${esc(s.smiles)}">${esc(s.smiles)}</div>`
+      : '';
+    const btnBlock = s.smiles ? `
+      <div class="slot-btns">
+        <button type="button" onclick="event.stopPropagation();_slotSearch(${i})" title="この SMILES で検索">🔍</button>
+        <button type="button" onclick="event.stopPropagation();_slotCopySmiles(${i})" title="SMILES をコピー">📋</button>
+        <button type="button" onclick="event.stopPropagation();_slotRetry(${i})" title="再認識">↻</button>
+      </div>` : '';
+    return `
+      <div class="slot-card ${activeCls} ${hasImg}" onclick="activateSlot(${i})">
+        <span class="slot-num">#${i+1}</span>
+        <button type="button" class="slot-close" onclick="event.stopPropagation();clearSlot(${i})" title="クリア">✕</button>
+        ${imgBlock}
+        ${statusBlock}
+        ${smilesBlock}
+        ${btnBlock}
+      </div>`;
+  }).join('');
+}
+
+function _updateSlotStatus(idx, msg, cls) {
+  if (!_slots[idx]) return;
+  _slots[idx].statusMsg = msg || '';
+  _slots[idx].statusClass = cls || '';
+  renderSlots();
+}
+
+function _slotCopySmiles(idx) {
+  const s = _slots[idx]; if (!s || !s.smiles) return;
+  navigator.clipboard?.writeText(s.smiles).then(() => {
+    _updateSlotStatus(idx, `✓ SMILES コピー済 [${s.source || ''}]`, 'ok');
+    setTimeout(() => {
+      if (_slots[idx] && _slots[idx].smiles === s.smiles) _updateSlotStatus(idx, `✓ 認識完了 [${s.source || ''}]`, 'ok');
+    }, 1200);
+  });
+}
+
+async function _slotSearch(idx) {
+  const s = _slots[idx]; if (!s || !s.smiles) return;
+  activateSlot(idx);
+  await searchBySMILES(s.smiles);
+}
+
+async function _slotRetry(idx) {
+  const s = _slots[idx]; if (!s || !s.imageUrl) return;
+  s.smiles = ''; s.source = ''; s.status = 'running';
+  _updateSlotStatus(idx, '再認識中…', '');
+  await _runSlotRecognition(idx);
+}
+
+async function _runSlotRecognition(idx) {
+  const s = _slots[idx]; if (!s || !s.imageUrl) return;
+  s.status = 'running';
+  try {
+    const result = await runStructureRecognition(s.imageUrl, {
+      autoSearch: false,
+      onStatus: (msg, cls) => _updateSlotStatus(idx, msg, cls),
+    });
+    _slots[idx].smiles = result.smiles;
+    _slots[idx].source = result.source;
+    _slots[idx].status = 'ok';
+    _updateSlotStatus(idx, `✓ 認識完了 [${result.source}]`, 'ok');
+  } catch (e) {
+    _slots[idx].status = 'err';
+    _updateSlotStatus(idx, `✗ ${e.message || e}`.slice(0, 160), 'err');
+  }
+}
+
+async function _loadFileIntoSlot(idx, file) {
+  if (!file) return;
+  const dataUrl = await new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+  _slots[idx] = {
+    imageUrl: dataUrl, status: 'running', statusMsg: '認識準備中…',
+    statusClass: '', smiles: '', source: ''
+  };
+  activateSlot(idx);
+  await _runSlotRecognition(idx);
+}
+
+// 初期レンダ (DOMContentLoaded より後ろで走る。index.html では script 末尾)
+setTimeout(() => { if (document.getElementById('slots-container')) renderSlots(); }, 0);
+
+// =============================================
 // 画像構造認識（Gemini → MolScribe → DECIMER → PubChem）
 // =============================================
 function handleImageDrop(e) {
@@ -3174,29 +3631,28 @@ async function pasteFromClipboard() {
   }
 }
 
+// 旧 API: 画像ファイルを受け取り、active スロットか空きスロットに投入
+// (drop / paste / clipboard button / PDF 認識ボタン共通)
 function handleImageFile(file) {
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    document.getElementById('psearch-input').value = '';
-    ++_searchSeq;
-    showImagePreview(e.target.result);
-    runStructureRecognition(e.target.result);
-  };
-  reader.readAsDataURL(file);
+  const psi = document.getElementById('psearch-input');
+  if (psi) psi.value = '';
+  ++_searchSeq;
+  const target = _slotTargetForPaste();
+  _loadFileIntoSlot(target, file);
 }
 
-function showImagePreview(src) {
-  const preview = document.getElementById('psearch-img-preview');
-  preview.style.display = 'flex';
-  preview.innerHTML = `
-    <img src="${src}" alt="構造式プレビュー">
-    <div id="decimer-status" class="psearch-loading">接続中…</div>`;
-  document.getElementById('psearch-results').innerHTML = '';
-}
-
-async function runStructureRecognition(base64) {
-  const se = () => document.getElementById('decimer-status');
+async function runStructureRecognition(base64, opts) {
+  const options = opts || {};
+  const autoSearch = options.autoSearch !== false;
+  const onStatus = options.onStatus || ((msg, cls) => {
+    const el = document.getElementById('decimer-status');
+    if (!el) return;
+    el.textContent = msg || '';
+    const colorMap = { ok: '#166534', err: 'var(--red)', warn: '#d97706' };
+    el.style.color = colorMap[cls] || 'var(--gray-400)';
+  });
+  const _stat = (msg, cls) => onStatus(msg, cls || '');
   const mime = base64.split(';')[0].replace('data:', '') || 'image/png';
 
   // Gemini Vision API（generativelanguage.googleapis.com）
@@ -3231,7 +3687,7 @@ Rules:
           );
           if (res.status === 503 || res.status === 429) {
             const wait = 1500 * Math.pow(2, attempt); // 1.5s → 3s → 6s
-            if (se()) { se().textContent = `Gemini 高負荷中… ${wait/1000}秒後にリトライ (${model}, ${attempt+1}/3)`; se().style.color = '#d97706'; }
+            _stat(`Gemini 高負荷中… ${wait/1000}秒後にリトライ (${model}, ${attempt+1}/3)`, 'warn');
             await new Promise(r => setTimeout(r, wait));
             continue;
           }
@@ -3272,7 +3728,7 @@ Rules:
       if (r.status === 503) {
         const j = await r.json().catch(() => ({}));
         const wait = Math.min((j.estimated_time || 20) * 1000, 30000);
-        if (se()) { se().textContent = `モデル起動中… ${Math.round(wait/1000)}秒待機 (${retry+1}/3)`; se().style.color = '#d97706'; }
+        _stat(`モデル起動中… ${Math.round(wait/1000)}秒待機 (${retry+1}/3)`, 'warn');
         await new Promise(res => setTimeout(res, wait));
         continue;
       }
@@ -3299,7 +3755,7 @@ Rules:
     const blob = new Blob([arr], { type: mime });
 
     // 1. アップロード
-    if (se()) { se().textContent = 'MolScribe: 画像アップロード中…'; se().style.color = 'var(--gray-400)'; }
+    _stat('MolScribe: 画像アップロード中…', '');
     const fd = new FormData();
     fd.append('files', blob, 'image.png');
     const upRes = await fetch(`${_MOLSCRIBE_SPACE}/gradio_api/upload`, { method: 'POST', body: fd });
@@ -3308,7 +3764,7 @@ Rules:
     if (!Array.isArray(paths) || !paths[0]) throw new Error('upload: path 空');
 
     // 2. 推論ジョブを投入
-    if (se()) se().textContent = 'MolScribe: 推論ジョブ投入中…';
+    _stat('MolScribe: 推論ジョブ投入中…', '');
     const callRes = await fetch(`${_MOLSCRIBE_SPACE}/gradio_api/call/predict`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3321,7 +3777,7 @@ Rules:
 
     // 3. SSE で結果受信 (CPU basic は推論 10-20s、cold start は +30-60s)
     // Gradio 4 の SSE 仕様: 空行区切りのイベント群、"event: complete" の次の "data: <JSON>" が最終結果
-    if (se()) se().textContent = 'MolScribe: 推論中 (最大60秒)…';
+    _stat('MolScribe: 推論中 (最大60秒)…', '');
     const resRes = await fetch(`${_MOLSCRIBE_SPACE}/gradio_api/call/predict/${eventId}`);
     if (!resRes.ok) throw new Error(`result ${resRes.status}`);
     const sseText = await resRes.text();
@@ -3350,25 +3806,25 @@ Rules:
   ];
 
   const geminiKey = localStorage.getItem(_GEMINI_KEY_KEY);
-  if (se()) {
-    se().textContent = geminiKey ? '① Gemini Vision API に送信中…' : '① Gemini キー未設定 → スキップ';
-    se().style.color = 'var(--gray-400)';
-  }
+  _stat(geminiKey ? '① Gemini Vision API に送信中…' : '① Gemini キー未設定 → スキップ', '');
   await new Promise(r => setTimeout(r, 200));
 
   const errs = [];
   for (let i = 0; i < labeled.length; i++) {
     const { label, fn } = labeled[i];
-    if (se()) { se().textContent = `(${i+1}/${labeled.length}) ${label} …`; se().style.color = 'var(--gray-400)'; }
+    _stat(`(${i+1}/${labeled.length}) ${label} …`, '');
     try {
       const smiles = await fn();
-      if (se()) { se().textContent = `✓ 認識完了 [${label}]`; se().style.color = '#166534'; }
-      await searchBySMILES(smiles);
-      return;
+      _stat(`✓ 認識完了 [${label}]`, 'ok');
+      if (autoSearch) await searchBySMILES(smiles);
+      return { smiles, source: label };
     } catch(e) { errs.push(`${label}: ${e.message}`); }
   }
 
-  if (se()) { se().textContent = '✗ 全試行失敗'; se().style.color = 'var(--red)'; }
+  _stat('✗ 全試行失敗', 'err');
+  if (!autoSearch) {
+    throw new Error(errs.map(e => e.split(':')[0]).join(' / ') + ' 全試行失敗');
+  }
   const errDetail = errs.map(e => `<li style="font-size:10px;color:var(--gray-400);">${esc(e)}</li>`).join('');
   document.getElementById('psearch-results').innerHTML = `
     <div class="psearch-empty" style="text-align:left;padding:10px 4px;">
