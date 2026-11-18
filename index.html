@@ -1237,6 +1237,7 @@ pre.json-pre {
         onkeydown="if(event.key==='Escape')clearPolymerSearch();else if(event.key==='Enter'){event.preventDefault();polymerSearch(this.value);}">
       <button class="psearch-img-btn" onclick="document.getElementById('imgSearchInput').click()" title="構造式画像から検索（DECIMER）">🖼</button>
       <button class="psearch-img-btn" onclick="pasteFromClipboard()" title="クリップボードから画像を貼り付け">📋</button>
+      <button class="psearch-img-btn" onclick="triggerWarmupManual()" title="MolScribe を起こす (ZeroGPU は ~15分 で寝る)">🔥</button>
       <button class="psearch-img-btn" onclick="toggleHFSettings()" title="HuggingFace API 設定" id="hf-gear-btn">⚙</button>
       <button class="psearch-clear" onclick="clearPolymerSearch()" title="クリア">✕</button>
       <input type="file" id="imgSearchInput" accept="image/*" style="display:none" onchange="handleImageFile(this.files[0])">
@@ -2367,6 +2368,8 @@ async function handlePdfFile(file) {
   document.getElementById('pdf-meta').innerHTML = '';
   document.getElementById('pdf-items').innerHTML = '';
   _resetPdfFigures('抽出中…');
+  // PDF 投入時に MolScribe を起こしておく (ユーザが画像認識を始めるまでの数秒で GPU 確保完了を狙う)
+  triggerWarmupSilent();
 
   // 画像抽出と Gemini 解析を並列で走らせる
   const imagesPromise = _extractPdfImages(file).catch(e => ({ _error: e }));
@@ -3585,6 +3588,125 @@ async function _loadFileIntoSlot(idx, file) {
 setTimeout(() => { if (document.getElementById('slots-container')) renderSlots(); }, 0);
 
 // =============================================
+// MolScribe HF Space ウォームアップ
+// ZeroGPU は ~15分 で GPU 解放、~48h で container pause。
+// ページロードと PDF 投入時に small image を投げ、GPU 割当を促す。
+// =============================================
+const _MOLSCRIBE_SPACE = 'https://atsumi220-molscribe.hf.space';
+const _MOLSCRIBE_WARMUP_LAST_KEY = 'polymertool.molscribeWarmupLast';
+const _MOLSCRIBE_WARMUP_MIN_INTERVAL_MS = 8 * 60 * 1000; // 8 分: GPU 解放 (~15分) より短い
+
+function _buildWarmupBlob() {
+  return new Promise(resolve => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 80; canvas.height = 80;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 80, 80);
+    // 簡単な六角形 (benzene 風) を描いて "構造式画像らしく" する
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    const cx = 40, cy = 40, r = 24;
+    for (let i = 0; i < 6; i++) {
+      const a = Math.PI / 3 * i;
+      const x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath(); ctx.stroke();
+    canvas.toBlob(resolve, 'image/png');
+  });
+}
+
+let _warmupInFlight = null;
+
+async function warmupMolScribe(opts) {
+  opts = opts || {};
+  const force = !!opts.force;
+  const onStatus = opts.onStatus || (() => {});
+  const now = Date.now();
+  const lastRaw = parseInt(localStorage.getItem(_MOLSCRIBE_WARMUP_LAST_KEY) || '0', 10) || 0;
+  if (!force && lastRaw && (now - lastRaw) < _MOLSCRIBE_WARMUP_MIN_INTERVAL_MS) {
+    const minLeft = Math.ceil((_MOLSCRIBE_WARMUP_MIN_INTERVAL_MS - (now - lastRaw)) / 60000);
+    onStatus(`skipped (前回から ${minLeft}分未満)`, 'skip');
+    return { ok: false, reason: 'cooldown' };
+  }
+  if (_warmupInFlight) {
+    onStatus('既に進行中', 'skip');
+    return await _warmupInFlight;
+  }
+  localStorage.setItem(_MOLSCRIBE_WARMUP_LAST_KEY, String(now));
+
+  _warmupInFlight = (async () => {
+    try {
+      onStatus('🔥 MolScribe ウォームアップ中…', 'warn');
+      const blob = await _buildWarmupBlob();
+      const fd = new FormData();
+      fd.append('files', blob, 'warmup.png');
+      const upRes = await fetch(`${_MOLSCRIBE_SPACE}/gradio_api/upload`, { method: 'POST', body: fd });
+      if (!upRes.ok) throw new Error(`upload ${upRes.status}`);
+      const paths = await upRes.json();
+      if (!Array.isArray(paths) || !paths[0]) throw new Error('upload: path 空');
+
+      const callRes = await fetch(`${_MOLSCRIBE_SPACE}/gradio_api/call/predict`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: [{ path: paths[0], meta: { _type: 'gradio.FileData' } }] })
+      });
+      if (!callRes.ok) throw new Error(`call ${callRes.status}`);
+      const callJson = await callRes.json();
+      const eventId = callJson.event_id || callJson;
+      if (!eventId) throw new Error('event_id 取得失敗');
+
+      // SSE 完了まで待つ (GPU 割当 + モデルロードを確実に促すため)
+      const resRes = await fetch(`${_MOLSCRIBE_SPACE}/gradio_api/call/predict/${eventId}`);
+      if (!resRes.ok) throw new Error(`result ${resRes.status}`);
+      await resRes.text();
+      const dt = Math.floor((Date.now() - now) / 1000);
+      onStatus(`✓ MolScribe 準備完了 (${dt}s)`, 'ok');
+      console.log('[molscribe-warmup] ready in', dt, 's');
+      return { ok: true, elapsed: dt };
+    } catch (e) {
+      onStatus(`✗ warmup 失敗: ${e.message || e}`, 'err');
+      console.warn('[molscribe-warmup] failed:', e);
+      return { ok: false, reason: e.message || String(e) };
+    } finally {
+      _warmupInFlight = null;
+    }
+  })();
+  return await _warmupInFlight;
+}
+
+// スロットヘッダのヒント欄に一時的にステータスを出すユーティリティ
+let _warmupHintTimer = null;
+function _warmupShowHint(msg, cls) {
+  const el = document.getElementById('slots-active-hint');
+  if (!el) return;
+  if (_warmupHintTimer) clearTimeout(_warmupHintTimer);
+  el.textContent = msg;
+  el.style.color = cls === 'ok' ? '#166534'
+    : cls === 'err' ? 'var(--red)'
+    : cls === 'warn' ? '#d97706' : '';
+  if (cls === 'ok' || cls === 'err' || cls === 'skip') {
+    _warmupHintTimer = setTimeout(() => {
+      el.textContent = 'クリックで ⌘V の投入先を切替';
+      el.style.color = '';
+    }, 4000);
+  }
+}
+
+function triggerWarmupSilent() {
+  warmupMolScribe({ onStatus: (msg, cls) => _warmupShowHint(msg, cls) });
+}
+
+function triggerWarmupManual() {
+  warmupMolScribe({ force: true, onStatus: (msg, cls) => _warmupShowHint(msg, cls) });
+}
+
+// ページロード後、1.5s で発火 (DOM 落ち着き + 最初の描画を優先)
+window.addEventListener('load', () => {
+  setTimeout(() => triggerWarmupSilent(), 1500);
+});
+
+// =============================================
 // 画像構造認識（Gemini → MolScribe → DECIMER → PubChem）
 // =============================================
 function handleImageDrop(e) {
@@ -3765,9 +3887,6 @@ Rules:
     throw new Error('モデル起動タイムアウト (3回リトライ失敗)');
   }
 
-  // 自前 HF Space 上の MolScribe (Gradio REST API、公開 Space なので token 不要)
-  // Space が未デプロイ or URL 変更時はこの定数を書き換える
-  const _MOLSCRIBE_SPACE = 'https://atsumi220-molscribe.hf.space';
   async function tryMolScribe() {
     if (!_MOLSCRIBE_SPACE) throw new Error('Space URL 未設定');
     const byteStr = atob(base64.split(',')[1]);
