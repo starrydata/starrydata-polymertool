@@ -3967,7 +3967,13 @@ Rules:
     if (!completeData) throw new Error('SSE に complete イベントなし (3回試行): ' + lastSseText.slice(0, 200));
     const data = JSON.parse(completeData);
     const smiles = (Array.isArray(data) && data[0] || '').trim();
+    const confidence = (Array.isArray(data) && typeof data[2] === 'number') ? data[2] : null;
     if (!smiles) throw new Error('SMILES 空');
+    // MolScribe は判読不能時に "<invalid>" を返す。信頼度 0 のときも実質失敗。
+    if (smiles === '<invalid>' || smiles.toLowerCase() === 'invalid'
+        || (confidence !== null && confidence < 0.1)) {
+      throw new Error(`判読不能 (confidence=${confidence ?? '?'}, SMILES="${smiles}") — クロップで 1 モノマーだけ切り出して再認識してみてください`);
+    }
     return smiles;
   }
 
