@@ -1811,6 +1811,18 @@ function _saveGeminiCache(obj) {
 
 let _geminiLastError = null;
 
+// Gemini 3.x は thinking 有効時に parts[0] が thought summary のことがある。
+// thought:true のパーツを除いて text を連結する。
+function _extractGeminiText(candidate) {
+  const parts = candidate?.content?.parts || [];
+  let out = '';
+  for (const p of parts) {
+    if (p?.thought) continue;
+    if (typeof p?.text === 'string') out += p.text;
+  }
+  return out;
+}
+
 async function fetchGeminiPolymerCard(tok) {
   const key = localStorage.getItem(_GEMINI_KEY_KEY);
   if (!key) { _geminiLastError = 'Gemini キー未設定'; return null; }
@@ -1853,7 +1865,7 @@ async function fetchGeminiPolymerCard(tok) {
     const models = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.1-flash-lite'];
     const body = JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { responseMimeType: 'application/json' }
+      generationConfig: { responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } }
     });
     let text = null, lastErr = null, rawData = null;
     outer: for (const model of models) {
@@ -1875,7 +1887,7 @@ async function fetchGeminiPolymerCard(tok) {
             continue outer;
           }
           rawData = await res.json();
-          text = rawData?.candidates?.[0]?.content?.parts?.[0]?.text;
+          text = _extractGeminiText(rawData?.candidates?.[0]);
           if (!text) {
             const finishReason = rawData?.candidates?.[0]?.finishReason || 'no-text';
             lastErr = `Gemini (${model}): empty text (finishReason=${finishReason})`;
@@ -2195,6 +2207,19 @@ async function analyzePdfWithGemini(base64, key) {
 
 {
   "paperInfo": { "title":"", "authors":[], "doi":"", "journal":"", "year":0 },
+  "figures": [
+    {
+      "page": 3,
+      "label": "Figure 1 / Scheme 2 等",
+      "caption": "論文中のキャプションを 1-2 文で要約",
+      "role": "monomer | repeatUnit | polymer | intermediate | byproduct | other",
+      "name": "構造の呼称 (例: TAHQ, PI-0.25 repeat unit)",
+      "smiles": "化合物 SMILES (繰り返し単位でない場合)",
+      "bigsmiles": "繰り返し単位の BigSMILES ([<]...[>] または [$])",
+      "linkedSampleName": "この構造が属する試料名 (sampleName と一致)、無ければ \"\"",
+      "note": "立体化学や置換基の不確実性コメント"
+    }
+  ],
   "samples": [
     {
       "sampleName": "論文中の試料名",
@@ -2315,7 +2340,18 @@ PI 共重合体 "PI-0.25" (TAHQ-m-tolidine-3,4-ODA 系) の抽出結果:
 - 不明は null または空文字 (推測しない)
 - weightRatio / molarRatio は論文記載の数値 (% や相対値)
 - polymerDropdown はリスト最近似、該当なしは "Other"
-- **共重合体は必ず elements を複数にして molarRatio と mw を入れる**`;
+- **共重合体は必ず elements を複数にして molarRatio と mw を入れる**
+
+# figures 配列 (構造式抽出) のルール
+- PDF 内の Figure / Scheme / Chart に描かれた **化学構造式** を 1 構造 = 1 entry で列挙する
+- Figure キャプションに複数構造が番号付きで並ぶ場合 (例: Figure 1 に (a)(b)(c)) は各構造を別 entry にし、label を "Figure 1a" のように分ける
+- smiles / bigsmiles のどちらを埋めるか:
+  - 単離可能な化合物・モノマー・開始剤など → smiles ([$]/[<]/[>] 無し)
+  - ポリマー繰り返し単位 (括弧 n / 波線 / 括弧内に [*]) → bigsmiles ([<]...[>] または [$])
+  - 両方埋められる場合は両方書く
+- 描かれた構造式が不鮮明で推定不能な場合も、キャプション・本文の記述から推定し、note に "estimated from text" と書く
+- 表紙画像・著者写真・グラフ (XY plot)・装置図は除外
+- Table 中に SMILES 表記や化学式が載っているのみで構造図がない場合は含めない (components/monomers 側で扱う)`;
 
   const models = ['gemini-3.8-flash', 'gemini-3.6-flash'];
   const body = JSON.stringify({
@@ -2379,8 +2415,11 @@ async function _streamGeminiSSE(res, model) {
       if (!payload || payload === '[DONE]') continue;
       try {
         const obj = JSON.parse(payload);
-        const chunk = obj?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (chunk) acc += chunk;
+        const parts = obj?.candidates?.[0]?.content?.parts || [];
+        for (const p of parts) {
+          if (p?.thought) continue;
+          if (typeof p?.text === 'string') acc += p.text;
+        }
       } catch (_) {}
     }
     const elapsed = Math.floor((Date.now() - t0) / 1000);
@@ -2648,6 +2687,86 @@ function _renderSampleCard(sample, idx) {
     </div>`;
 }
 
+function _copyFigureSmiles(btn, smiles) {
+  navigator.clipboard?.writeText(smiles).then(() => {
+    const prev = btn.textContent;
+    btn.textContent = '✓ コピー済';
+    btn.style.background = '#dcfce7';
+    btn.style.color = '#166534';
+    setTimeout(() => { btn.textContent = prev; btn.style.background = ''; btn.style.color = ''; }, 1500);
+  });
+}
+
+function _figureSearchFromSmiles(smiles) {
+  const el = document.getElementById('psearch-input');
+  if (!el) return;
+  el.value = smiles;
+  polymerSearch(smiles);
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+const _FIG_ROLE_COLOR = {
+  monomer:       { bg: '#dbeafe', fg: '#1e40af' },
+  repeatUnit:    { bg: '#ede9fe', fg: '#5b21b6' },
+  polymer:       { bg: '#ede9fe', fg: '#5b21b6' },
+  intermediate:  { bg: '#fef3c7', fg: '#854d0e' },
+  byproduct:     { bg: '#fee2e2', fg: '#991b1b' },
+  other:         { bg: '#f1f5f9', fg: '#334155' },
+};
+
+function _renderFiguresSection(figures) {
+  if (!Array.isArray(figures) || !figures.length) return '';
+  const rows = figures.map((f, i) => {
+    if (!f) return '';
+    const label = esc(f.label || `Figure ${i + 1}`);
+    const page = f.page ? ` <span style="color:var(--gray-400);font-size:11px;">p.${esc(String(f.page))}</span>` : '';
+    const role = f.role || 'other';
+    const col = _FIG_ROLE_COLOR[role] || _FIG_ROLE_COLOR.other;
+    const roleBadge = `<span style="background:${col.bg};color:${col.fg};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">${esc(role)}</span>`;
+    const linked = f.linkedSampleName ? `<span style="font-size:11px;color:var(--gray-500);">→ ${esc(f.linkedSampleName)}</span>` : '';
+    const name = f.name ? `<div style="font-size:12px;font-weight:600;color:#1e293b;margin-top:2px;">${esc(f.name)}</div>` : '';
+    const caption = f.caption ? `<div style="font-size:11px;color:var(--gray-500);margin-top:2px;line-height:1.4;">${esc(f.caption)}</div>` : '';
+    const note = f.note ? `<div style="font-size:11px;color:#b45309;margin-top:3px;">⚠ ${esc(f.note)}</div>` : '';
+    const smilesRows = [];
+    for (const [key, labelTxt] of [['smiles', 'SMILES'], ['bigsmiles', 'BigSMILES']]) {
+      const v = (f[key] || '').trim();
+      if (!v) continue;
+      const vEsc = esc(v);
+      const vAttr = v.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+      smilesRows.push(`
+        <div style="display:flex;gap:6px;align-items:flex-start;margin-top:4px;">
+          <span style="font-size:10px;color:var(--gray-400);min-width:52px;padding-top:3px;">${labelTxt}</span>
+          <code style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:3px 6px;font-size:11px;word-break:break-all;line-height:1.4;">${vEsc}</code>
+          <button type="button" style="font-size:10px;padding:2px 6px;border:1px solid #cbd5e1;border-radius:4px;background:white;cursor:pointer;white-space:nowrap;"
+            onclick="_copyFigureSmiles(this, '${vAttr}')">📋</button>
+          <button type="button" style="font-size:10px;padding:2px 6px;border:1px solid #93c5fd;border-radius:4px;background:#eff6ff;color:#1d4ed8;cursor:pointer;white-space:nowrap;"
+            onclick="_figureSearchFromSmiles('${vAttr}')">🔍 検索</button>
+        </div>`);
+    }
+    if (!smilesRows.length) return '';
+    return `
+      <div style="padding:8px 10px;border-top:1px dashed #e2e8f0;">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <span style="font-weight:600;color:#334155;font-size:12px;">${label}</span>${page}
+          ${roleBadge}
+          ${linked}
+        </div>
+        ${name}
+        ${caption}
+        ${smilesRows.join('')}
+        ${note}
+      </div>`;
+  }).filter(Boolean);
+  if (!rows.length) return '';
+  return `
+    <div style="margin-top:10px;border:1px solid #e2e8f0;border-radius:6px;background:white;">
+      <div style="padding:6px 10px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:12px;font-weight:600;color:#475569;">
+        🧪 構造式候補 (${rows.length} 件) <span style="font-weight:400;color:var(--gray-400);font-size:11px;">※ Gemini 推定のため要確認</span>
+      </div>
+      ${rows.join('')}
+    </div>`;
+}
+
 function _renderPaperAnalysis(parsed, filename) {
   const metaEl = document.getElementById('pdf-meta');
   const itemsEl = document.getElementById('pdf-items');
@@ -2731,9 +2850,14 @@ function _renderPaperAnalysis(parsed, filename) {
     }
   }
 
-  itemsEl.innerHTML = samples.length
-    ? `<div style="font-size:11px;color:var(--gray-500);margin:8px 2px 4px;">検出: ${samples.length} 試料 / ${polyCount} ポリマー / ${addCount} 添加剤</div>`
-      + samples.map((s, i) => _renderSampleCard(s, i)).join('')
+  const figures = Array.isArray(parsed.figures) ? parsed.figures : [];
+  const figuresHtml = _renderFiguresSection(figures);
+  const figCount = (figuresHtml.match(/padding:8px 10px;border-top:1px dashed/g) || []).length;
+  const summaryLine = samples.length || figCount
+    ? `<div style="font-size:11px;color:var(--gray-500);margin:8px 2px 4px;">検出: ${samples.length} 試料 / ${polyCount} ポリマー / ${addCount} 添加剤${figCount ? ` / ${figCount} 構造式` : ''}</div>`
+    : '';
+  itemsEl.innerHTML = samples.length || figCount
+    ? summaryLine + figuresHtml + samples.map((s, i) => _renderSampleCard(s, i)).join('')
     : '<div style="font-size:12px;color:var(--gray-400);padding:8px 0;">試料情報は見つかりませんでした。</div>';
 
   const results = document.getElementById('psearch-results');
@@ -2743,11 +2867,11 @@ function _renderPaperAnalysis(parsed, filename) {
       `<div class="psearch-section-sep">📄 「${esc(info.title || filename).slice(0, 60)}」 から抽出</div>`
       + cards.join('');
   }
-  _setPdfStatus(`✓ 完了: ${samples.length} 試料 / ${polyCount} ポリマー / ${addCount} 添加剤`);
+  _setPdfStatus(`✓ 完了: ${samples.length} 試料 / ${polyCount} ポリマー / ${addCount} 添加剤${figCount ? ` / ${figCount} 構造式` : ''}`);
 }
 
 // =============================================
-// 画像構造認識（DECIMER → PubChem）
+// 画像構造認識（Gemini → MolScribe → DECIMER → PubChem）
 // =============================================
 function handleImageDrop(e) {
   e.preventDefault();
@@ -2844,7 +2968,7 @@ async function runStructureRecognition(base64) {
     const key = localStorage.getItem(_GEMINI_KEY_KEY);
     if (!key) throw new Error('Gemini キー未設定');
     const b64 = base64.split(',')[1];
-    const body = JSON.stringify({ contents: [{ parts: [
+    const body = JSON.stringify({ generationConfig: { thinkingConfig: { thinkingBudget: 0 } }, contents: [{ parts: [
       { inline_data: { mime_type: mime, data: b64 } },
       { text: `You are an expert chemist specializing in polymer chemistry. Convert the chemical structure shown in this image to a SMILES string.
 
@@ -2880,7 +3004,7 @@ Rules:
             throw new Error(`Gemini ${res.status}: ${j?.error?.message || ''}`);
           }
           const data = await res.json();
-          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          const text = _extractGeminiText(data?.candidates?.[0]).trim();
           if (!text) throw new Error('Gemini レスポンスに SMILES なし');
           const smiles = text.split('\n')[0].replace(/^`+|`+$/g, '').trim();
           if (!smiles) throw new Error('SMILES 抽出失敗');
@@ -2928,8 +3052,64 @@ Rules:
     throw new Error('モデル起動タイムアウト (3回リトライ失敗)');
   }
 
+  // 自前 HF Space 上の MolScribe (Gradio REST API、公開 Space なので token 不要)
+  // Space が未デプロイ or URL 変更時はこの定数を書き換える
+  const _MOLSCRIBE_SPACE = 'https://atsumi220-molscribe.hf.space';
+  async function tryMolScribe() {
+    if (!_MOLSCRIBE_SPACE) throw new Error('Space URL 未設定');
+    const byteStr = atob(base64.split(',')[1]);
+    const arr = new Uint8Array(byteStr.length);
+    for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
+    const blob = new Blob([arr], { type: mime });
+
+    // 1. アップロード
+    if (se()) { se().textContent = 'MolScribe: 画像アップロード中…'; se().style.color = 'var(--gray-400)'; }
+    const fd = new FormData();
+    fd.append('files', blob, 'image.png');
+    const upRes = await fetch(`${_MOLSCRIBE_SPACE}/gradio_api/upload`, { method: 'POST', body: fd });
+    if (!upRes.ok) throw new Error(`upload ${upRes.status}`);
+    const paths = await upRes.json();
+    if (!Array.isArray(paths) || !paths[0]) throw new Error('upload: path 空');
+
+    // 2. 推論ジョブを投入
+    if (se()) se().textContent = 'MolScribe: 推論ジョブ投入中…';
+    const callRes = await fetch(`${_MOLSCRIBE_SPACE}/gradio_api/call/predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: [{ path: paths[0], meta: { _type: 'gradio.FileData' } }] })
+    });
+    if (!callRes.ok) throw new Error(`call ${callRes.status}`);
+    const callJson = await callRes.json();
+    const eventId = callJson.event_id || callJson;
+    if (!eventId) throw new Error('event_id 取得失敗');
+
+    // 3. SSE で結果受信 (CPU basic は推論 10-20s、cold start は +30-60s)
+    // Gradio 4 の SSE 仕様: 空行区切りのイベント群、"event: complete" の次の "data: <JSON>" が最終結果
+    if (se()) se().textContent = 'MolScribe: 推論中 (最大60秒)…';
+    const resRes = await fetch(`${_MOLSCRIBE_SPACE}/gradio_api/call/predict/${eventId}`);
+    if (!resRes.ok) throw new Error(`result ${resRes.status}`);
+    const sseText = await resRes.text();
+    let event = '', dataLine = '', completeData = null, errorData = null;
+    for (const line of sseText.split('\n')) {
+      if (line.startsWith('event:')) event = line.slice(6).trim();
+      else if (line.startsWith('data:')) dataLine = line.slice(5).trim();
+      else if (line === '') {
+        if (event === 'complete' && dataLine) completeData = dataLine;
+        if (event === 'error' && dataLine) errorData = dataLine;
+        event = ''; dataLine = '';
+      }
+    }
+    if (errorData) throw new Error('MolScribe サーバエラー: ' + errorData.slice(0, 120));
+    if (!completeData) throw new Error('SSE に complete イベントなし: ' + sseText.slice(0, 120));
+    const data = JSON.parse(completeData);
+    const smiles = (Array.isArray(data) && data[0] || '').trim();
+    if (!smiles) throw new Error('SMILES 空');
+    return smiles;
+  }
+
   const labeled = [
     { label: 'Gemini Vision API', fn: tryGemini },
+    { label: 'MolScribe (自前)',   fn: tryMolScribe },
     { label: 'HF Inference API',  fn: tryHFInference },
   ];
 
@@ -3038,7 +3218,7 @@ Rules:
 Example output: [{"name":"bisphenol A","smiles":"Oc1ccc(C(C)(C)c2ccc(O)cc2)cc1","role":"bisphenol"},{"name":"4,4'-dichlorodiphenyl sulfone","smiles":"Clc1ccc(S(=O)(=O)c2ccc(Cl)cc2)cc1","role":"diaryl halide"}]`;
 
     const models = ['gemini-3.8-flash', 'gemini-3.6-flash'];
-    const body = JSON.stringify({ contents: [{ parts: [{ text: prompt }]}]});
+    const body = JSON.stringify({ generationConfig: { thinkingConfig: { thinkingBudget: 0 } }, contents: [{ parts: [{ text: prompt }]}]});
     let res, lastStatus;
     outer: for (const model of models) {
       for (let attempt = 0; attempt < 3; attempt++) {
@@ -3055,7 +3235,7 @@ Example output: [{"name":"bisphenol A","smiles":"Oc1ccc(C(C)(C)c2ccc(O)cc2)cc1",
     }
     if (!res || !res.ok) throw new Error(`Gemini ${lastStatus || 'error'}`);
     const data = await res.json();
-    const text = (data?.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+    const text = _extractGeminiText(data?.candidates?.[0]).trim();
     if (!text) throw new Error('empty response');
     const jsonText = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
     let monomers;
