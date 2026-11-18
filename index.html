@@ -2070,8 +2070,8 @@ async function fetchGeminiPolymerCard(tok) {
 - key は英数字とハイフンのみ、20 文字以内
 - 認識できない場合も、推定で良いので可能な限り埋めること。どうしても推定不能のときのみ {"error": "unknown"} を返す`;
 
-    // 3.x は無料枠 20 RPD と非常に少ないので、枯渇後は 2.5/2.0 flash にフォールバック (1,500 RPD 想定)
-    const models = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+    // 3.x flash は無料枠 20 RPD と少ないので、flash-lite 系にフォールバック (lite は RPD 大)
+    const models = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
     const body = JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } }
@@ -2912,8 +2912,9 @@ PI 共重合体 "PI-0.25" (TAHQ-m-tolidine-3,4-ODA 系) の抽出結果:
 - 表紙画像・著者写真・グラフ (XY plot)・装置図は除外
 - Table 中に SMILES 表記や化学式が載っているのみで構造図がない場合は含めない (components/monomers 側で扱う)`;
 
-  // 無料枠は 3.x=20 RPD、2.x=1,500 RPD 相当。枯渇後は旧世代にフォールバック
-  const models = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+  // 3.x flash は無料枠 20 RPD と少ないので flash-lite 系にフォールバック (lite は RPD 大)
+  // (2.5/2.0-flash は 2026-11 時点でリタイアされ 404 を返す)
+  const models = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
   const body = JSON.stringify({
     contents: [{ parts: [
       { inline_data: { mime_type: 'application/pdf', data: base64 } },
@@ -3837,9 +3838,9 @@ Rules:
 - Leave open valences (chain ends / repeat unit attachment points) as-is without adding H or dummy atoms
 - If the structure is ambiguous, output your best interpretation` }
     ]}]});
-    // モデル + リトライ（503/429 は指数バックオフで最大3回、2.5/2.0-flash にフォールバック）
-    // 無料枠は 3.x=20 RPD、2.x=1,500 RPD 相当
-    const models = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+    // モデル + リトライ（503/429 は指数バックオフで最大3回、flash-lite にフォールバック）
+    // 3.x flash は無料枠 20 RPD、flash-lite は RPD 大
+    const models = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
     let lastErr = null;
     for (const model of models) {
       for (let attempt = 0; attempt < 3; attempt++) {
@@ -4105,8 +4106,8 @@ Rules:
 
 Example output: [{"name":"bisphenol A","smiles":"Oc1ccc(C(C)(C)c2ccc(O)cc2)cc1","role":"bisphenol"},{"name":"4,4'-dichlorodiphenyl sulfone","smiles":"Clc1ccc(S(=O)(=O)c2ccc(Cl)cc2)cc1","role":"diaryl halide"}]`;
 
-    // 無料枠は 3.x=20 RPD、2.x=1,500 RPD 相当
-    const models = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+    // 3.x flash は無料枠 20 RPD、flash-lite は RPD 大
+    const models = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
     const body = JSON.stringify({ generationConfig: { thinkingConfig: { thinkingBudget: 0 } }, contents: [{ parts: [{ text: prompt }]}]});
     let res, lastStatus;
     outer: for (const model of models) {
