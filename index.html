@@ -3954,16 +3954,25 @@ Rules:
     const { label, fn } = labeled[i];
     _stat(`(${i+1}/${labeled.length}) ${label} …`, '');
     try {
+      const t0 = Date.now();
       const smiles = await fn();
-      _stat(`✓ 認識完了 [${label}]`, 'ok');
+      const dt = Math.floor((Date.now() - t0) / 1000);
+      const skippedTxt = errs.length ? `  (skipped: ${errs.map(e => e.split(':')[0]).join(', ')})` : '';
+      _stat(`✓ ${label} [${dt}s]${skippedTxt}`, 'ok');
+      // 失敗した前段があれば console に詳細を出す (診断用)
+      if (errs.length) console.warn('[recognition] fallback sources failed:', errs);
       if (autoSearch) await searchBySMILES(smiles);
-      return { smiles, source: label };
-    } catch(e) { errs.push(`${label}: ${e.message}`); }
+      return { smiles, source: label, attempts: errs };
+    } catch(e) {
+      const msg = `${label}: ${e.message || e}`;
+      errs.push(msg);
+      console.warn('[recognition] attempt failed:', msg);
+    }
   }
 
-  _stat('✗ 全試行失敗', 'err');
+  _stat('✗ 全試行失敗: ' + errs.map(e => e.split(':')[0]).join(' / '), 'err');
   if (!autoSearch) {
-    throw new Error(errs.map(e => e.split(':')[0]).join(' / ') + ' 全試行失敗');
+    throw new Error(errs.join(' | '));
   }
   const errDetail = errs.map(e => `<li style="font-size:10px;color:var(--gray-400);">${esc(e)}</li>`).join('');
   document.getElementById('psearch-results').innerHTML = `
