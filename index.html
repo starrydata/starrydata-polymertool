@@ -3505,7 +3505,11 @@ function renderSlots() {
       : `<div class="slot-status" style="color:var(--gray-400);">クリックで ⌘V の投入先に指定</div>`;
     const smilesBlock = (s.smiles)
       ? `<div class="slot-smiles" title="${esc(s.smiles)}">${esc(s.smiles)}</div>`
-      : (s.imageUrl ? `<div class="slot-smiles" style="color:var(--gray-400);font-style:italic;">(認識中…)</div>` : '');
+      : (s.imageUrl ? (
+          s.status === 'err'
+            ? `<div class="slot-smiles" style="color:var(--red);font-style:italic;background:#fef2f2;border-color:#fecaca;">(認識失敗 — クロップして再試行)</div>`
+            : `<div class="slot-smiles" style="color:var(--gray-400);font-style:italic;">(認識中…)</div>`
+        ) : '');
     const btnBlock = s.smiles ? `
       <div class="slot-btns">
         <button type="button" onclick="event.stopPropagation();_slotSearch(${i})" title="この SMILES で検索">🔍 検索</button>
@@ -3972,7 +3976,9 @@ Rules:
     // MolScribe は判読不能時に "<invalid>" を返す。信頼度 0 のときも実質失敗。
     if (smiles === '<invalid>' || smiles.toLowerCase() === 'invalid'
         || (confidence !== null && confidence < 0.1)) {
-      throw new Error(`判読不能 (confidence=${confidence ?? '?'}, SMILES="${smiles}") — クロップで 1 モノマーだけ切り出して再認識してみてください`);
+      // 失敗時は garbage SMILES が返ることが多いので冒頭 20 文字だけに切る
+      const smilesPeek = smiles.length > 20 ? smiles.slice(0, 20) + '…' : smiles;
+      throw new Error(`判読不能 (confidence=${confidence ?? '?'}) — クロップで 1 モノマーだけ切り出して再試行を推奨 [returned: "${smilesPeek}"]`);
     }
     return smiles;
   }
