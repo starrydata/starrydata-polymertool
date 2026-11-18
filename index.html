@@ -829,6 +829,54 @@ pre.json-pre {
 }
 .psearch-img-btn:hover { background: var(--blue-light); border-color: var(--blue-mid); }
 .psearch-panel.drag-over { border-color: #f59e0b; box-shadow: 0 0 0 2px #fde68a; }
+
+/* ── PDF 内構造式画像セクション ── */
+.pdf-figures-section {
+  border-bottom: 1px solid var(--gray-200);
+  background: #fafbfc;
+  padding: 8px 10px 10px;
+}
+.pdf-figures-header {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px;
+}
+.pdf-figures-status { font-size: 11px; font-weight: 400; color: var(--gray-400); }
+.pdf-figures-status.err { color: var(--red); }
+.pdf-figures-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 6px; max-height: 300px; overflow-y: auto;
+}
+.pdf-figures-empty {
+  grid-column: 1/-1;
+  font-size: 11px; color: var(--gray-400);
+  padding: 12px 4px; text-align: center;
+  border: 1px dashed var(--gray-200); border-radius: 6px; background: white;
+}
+.pdf-fig-card {
+  position: relative; background: white; border: 1px solid var(--gray-200);
+  border-radius: 6px; padding: 4px; display: flex; flex-direction: column; gap: 3px;
+  cursor: zoom-in; transition: border-color .15s;
+}
+.pdf-fig-card:hover { border-color: var(--blue-mid); box-shadow: 0 0 0 1px var(--blue-mid); }
+.pdf-fig-card img { width: 100%; height: 90px; object-fit: contain; background: #fafafa; border-radius: 3px; }
+.pdf-fig-card .pdf-fig-meta {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 10px; color: var(--gray-500);
+}
+.pdf-fig-card .pdf-fig-btn {
+  font-size: 10px; padding: 2px 6px; border: 1px solid #93c5fd; border-radius: 4px;
+  background: #eff6ff; color: #1d4ed8; cursor: pointer; white-space: nowrap;
+}
+.pdf-fig-card .pdf-fig-btn:hover { background: var(--blue-light); }
+
+/* 画像拡大モーダル */
+#pdf-fig-zoom {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+  display: none; align-items: center; justify-content: center;
+  z-index: 10000; padding: 20px;
+}
+#pdf-fig-zoom.open { display: flex; }
+#pdf-fig-zoom img { max-width: 90vw; max-height: 90vh; background: white; border-radius: 6px; }
 #psearch-img-preview {
   display: none; align-items: center; gap: 10px;
   padding: 8px 14px; background: #fffbeb; border-bottom: 1px solid #fde68a;
@@ -1040,11 +1088,24 @@ pre.json-pre {
     <div id="pdf-items"></div>
   </div>
 
-  <!-- 右カラム: ポリマー検索パネル -->
+  <!-- 右カラム: PDF 構造式画像 (上) + ポリマー検索パネル (下) -->
   <div class="psearch-panel" id="psearch-panel"
     ondragover="event.preventDefault();this.classList.add('drag-over')"
     ondragleave="this.classList.remove('drag-over')"
     ondrop="handleImageDrop(event)">
+
+    <!-- 上段: PDF 内の構造式画像 (ローカル版と同等) -->
+    <div id="pdf-figures-section" class="pdf-figures-section">
+      <div class="pdf-figures-header">
+        <span>🖼 PDF 内の構造式画像</span>
+        <span id="pdf-figures-status" class="pdf-figures-status"></span>
+      </div>
+      <div id="pdf-figures-grid" class="pdf-figures-grid">
+        <div class="pdf-figures-empty">PDF をドロップすると埋込画像が表示されます</div>
+      </div>
+    </div>
+
+    <!-- 下段: ポリマー検索 -->
     <div class="psearch-bar">
       <span class="psearch-label">🔍 ポリマー名検索</span>
       <input type="search" id="psearch-input" name="polymer-query-no-autofill" autocomplete="off"
@@ -1109,6 +1170,14 @@ pre.json-pre {
   </div>
 </footer>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs" type="module"></script>
+<script type="module">
+// pdf.js を window に公開 (CDN バージョン固定) + worker 設定
+import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs';
+window.pdfjsLib = pdfjsLib;
+window.dispatchEvent(new Event('pdfjs-ready'));
+</script>
 <script src="polymer_db.js"></script>
 <script>
 // =============================================
@@ -2167,16 +2236,183 @@ async function handlePdfFile(file) {
   _setPdfStatus(`📖 PDF 読込中… (${(file.size/1024/1024).toFixed(1)}MB)`);
   document.getElementById('pdf-meta').innerHTML = '';
   document.getElementById('pdf-items').innerHTML = '';
+  _resetPdfFigures('抽出中…');
+
+  // 画像抽出と Gemini 解析を並列で走らせる
+  const imagesPromise = _extractPdfImages(file).catch(e => ({ _error: e }));
 
   const base64 = await _fileToBase64(file);
-  try {
-    const parsed = await analyzePdfWithGemini(base64, key);
-    _stopPdfElapsed();
-    _renderPaperAnalysis(parsed, file.name);
-  } catch (e) {
-    _stopPdfElapsed();
-    _setPdfStatus(`❌ 抽出失敗: ${e.message || e}`, true);
+  const analyzePromise = analyzePdfWithGemini(base64, key)
+    .then(parsed => { _stopPdfElapsed(); _renderPaperAnalysis(parsed, file.name); })
+    .catch(e => { _stopPdfElapsed(); _setPdfStatus(`❌ 抽出失敗: ${e.message || e}`, true); });
+
+  const images = await imagesPromise;
+  if (images && !images._error) _renderPdfFigures(images);
+  else _setPdfFiguresStatus(`抽出失敗: ${images?._error?.message || 'unknown'}`, true);
+
+  await analyzePromise;
+}
+
+// =============================================
+// PDF 埋込画像抽出 (pdf.js, ローカル版 structure_extractor.py 相当)
+// =============================================
+const _PDF_FIG_MIN_SIDE = 150;
+const _PDF_FIG_MAX_ASPECT = 6.0;
+const _PDF_FIG_MIN_AREA = 150 * 150;
+
+function _setPdfFiguresStatus(msg, isError) {
+  const el = document.getElementById('pdf-figures-status');
+  if (!el) return;
+  el.textContent = msg || '';
+  el.className = 'pdf-figures-status' + (isError ? ' err' : '');
+}
+
+function _resetPdfFigures(statusMsg) {
+  const grid = document.getElementById('pdf-figures-grid');
+  if (grid) grid.innerHTML = '<div class="pdf-figures-empty">読込中…</div>';
+  _setPdfFiguresStatus(statusMsg || '');
+}
+
+async function _waitForPdfjs(timeoutMs = 5000) {
+  if (window.pdfjsLib) return window.pdfjsLib;
+  return await new Promise((resolve, reject) => {
+    const t0 = Date.now();
+    const iv = setInterval(() => {
+      if (window.pdfjsLib) { clearInterval(iv); resolve(window.pdfjsLib); }
+      else if (Date.now() - t0 > timeoutMs) { clearInterval(iv); reject(new Error('pdf.js 読込タイムアウト')); }
+    }, 50);
+  });
+}
+
+function _getPdfPageObj(page, name) {
+  return new Promise(resolve => {
+    try { page.objs.get(name, resolve); }
+    catch (_) { resolve(null); }
+  });
+}
+
+function _pdfImageToDataUrl(img) {
+  const w = img.width, h = img.height;
+  if (!w || !h) return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  if (img.bitmap) {
+    ctx.drawImage(img.bitmap, 0, 0);
+  } else if (img.data) {
+    const src = img.data;
+    const dst = ctx.createImageData(w, h);
+    const px = dst.data;
+    const len = src.length;
+    if (len === w * h * 4) {
+      px.set(src);
+    } else if (len === w * h * 3) {
+      for (let j = 0, k = 0; j < len; j += 3, k += 4) {
+        px[k] = src[j]; px[k+1] = src[j+1]; px[k+2] = src[j+2]; px[k+3] = 255;
+      }
+    } else if (len === w * h) {
+      for (let j = 0, k = 0; j < len; j++, k += 4) {
+        px[k] = px[k+1] = px[k+2] = src[j]; px[k+3] = 255;
+      }
+    } else {
+      return null;
+    }
+    ctx.putImageData(dst, 0, 0);
+  } else {
+    return null;
   }
+  try { return canvas.toDataURL('image/png'); } catch (_) { return null; }
+}
+
+async function _extractPdfImages(file) {
+  const pdfjsLib = await _waitForPdfjs();
+  const OPS = pdfjsLib.OPS;
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf, disableFontFace: true }).promise;
+  const results = [];
+  const seen = new Set();
+
+  for (let p = 1; p <= pdf.numPages; p++) {
+    _setPdfFiguresStatus(`ページ ${p} / ${pdf.numPages} 解析中…`);
+    let page;
+    try { page = await pdf.getPage(p); } catch (_) { continue; }
+    let ops;
+    try { ops = await page.getOperatorList(); } catch (_) { continue; }
+    const names = [];
+    for (let i = 0; i < ops.fnArray.length; i++) {
+      const fn = ops.fnArray[i];
+      if (fn === OPS.paintImageXObject || fn === OPS.paintJpegXObject || fn === OPS.paintInlineImageXObject) {
+        const arg = ops.argsArray[i];
+        const name = arg && arg[0];
+        if (typeof name === 'string') names.push(name);
+      }
+    }
+    for (const name of names) {
+      if (seen.has(name + '@' + p)) continue;
+      seen.add(name + '@' + p);
+      let img = null;
+      try { img = await _getPdfPageObj(page, name); } catch (_) { continue; }
+      if (!img || !img.width || !img.height) continue;
+      const w = img.width, h = img.height;
+      if (w < _PDF_FIG_MIN_SIDE || h < _PDF_FIG_MIN_SIDE) continue;
+      if (w * h < _PDF_FIG_MIN_AREA) continue;
+      const ar = Math.max(w, h) / Math.max(1, Math.min(w, h));
+      if (ar > _PDF_FIG_MAX_ASPECT) continue;
+      const dataUrl = _pdfImageToDataUrl(img);
+      if (!dataUrl) continue;
+      results.push({ page: p, idx: results.length, width: w, height: h, dataUrl });
+    }
+    page.cleanup && page.cleanup();
+  }
+
+  return results;
+}
+
+let _pdfFiguresCache = [];
+
+function _renderPdfFigures(images) {
+  _pdfFiguresCache = images;
+  const grid = document.getElementById('pdf-figures-grid');
+  if (!grid) return;
+  if (!images.length) {
+    grid.innerHTML = '<div class="pdf-figures-empty">埋込画像なし (構造式候補を検出できず)</div>';
+    _setPdfFiguresStatus('0 画像');
+    return;
+  }
+  grid.innerHTML = images.map((img, i) => `
+    <div class="pdf-fig-card" data-fig-idx="${i}" onclick="_zoomPdfFig(${i})">
+      <img src="${img.dataUrl}" alt="p${img.page} #${img.idx}">
+      <div class="pdf-fig-meta">
+        <span>p${img.page} · ${img.width}×${img.height}</span>
+        <button type="button" class="pdf-fig-btn" onclick="event.stopPropagation();_recognizePdfFig(${i})" title="構造式認識">🔍 認識</button>
+      </div>
+    </div>
+  `).join('');
+  _setPdfFiguresStatus(`${images.length} 画像`);
+}
+
+function _zoomPdfFig(idx) {
+  const img = _pdfFiguresCache[idx];
+  if (!img) return;
+  let modal = document.getElementById('pdf-fig-zoom');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'pdf-fig-zoom';
+    modal.innerHTML = '<img>';
+    modal.addEventListener('click', () => modal.classList.remove('open'));
+    document.body.appendChild(modal);
+  }
+  modal.querySelector('img').src = img.dataUrl;
+  modal.classList.add('open');
+}
+
+async function _recognizePdfFig(idx) {
+  const img = _pdfFiguresCache[idx];
+  if (!img) return;
+  const res = await fetch(img.dataUrl);
+  const blob = await res.blob();
+  const file = new File([blob], `p${img.page}_${img.idx}.png`, { type: 'image/png' });
+  handleImageFile(file);
 }
 
 function _fileToBase64(file) {
