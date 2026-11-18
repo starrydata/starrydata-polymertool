@@ -3916,23 +3916,37 @@ Rules:
     if (!eventId) throw new Error('event_id 取得失敗');
 
     // 3. SSE で結果受信 (CPU basic は推論 10-20s、cold start は +30-60s)
-    // Gradio 4 の SSE 仕様: 空行区切りのイベント群、"event: complete" の次の "data: <JSON>" が最終結果
+    // Gradio 4 系: イベント名は "complete" or "process_completed"、"error" or "process_failed"
+    // ZeroGPU キュー待ちは "estimation" / "heartbeat" が流れる
     _stat('MolScribe: 推論中 (最大60秒)…', '');
-    const resRes = await fetch(`${_MOLSCRIBE_SPACE}/gradio_api/call/predict/${eventId}`);
-    if (!resRes.ok) throw new Error(`result ${resRes.status}`);
-    const sseText = await resRes.text();
-    let event = '', dataLine = '', completeData = null, errorData = null;
-    for (const line of sseText.split('\n')) {
-      if (line.startsWith('event:')) event = line.slice(6).trim();
-      else if (line.startsWith('data:')) dataLine = line.slice(5).trim();
-      else if (line === '') {
-        if (event === 'complete' && dataLine) completeData = dataLine;
-        if (event === 'error' && dataLine) errorData = dataLine;
-        event = ''; dataLine = '';
+    const t0 = Date.now();
+    // 最大 3 回まで SSE 再接続 (Gradio が queued 状態で早期に接続を切ることがあるため)
+    let completeData = null, errorData = null, lastSseText = '';
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const resRes = await fetch(`${_MOLSCRIBE_SPACE}/gradio_api/call/predict/${eventId}`);
+      if (!resRes.ok) throw new Error(`result ${resRes.status} (attempt ${attempt+1}/3)`);
+      const sseText = await resRes.text();
+      lastSseText = sseText;
+      console.log(`[molscribe] SSE attempt ${attempt+1}/3 (${(Date.now()-t0)/1000}s, ${sseText.length}B):`, sseText.slice(0, 400));
+      let event = '', dataLine = '';
+      for (const line of sseText.split('\n')) {
+        if (line.startsWith('event:')) event = line.slice(6).trim();
+        else if (line.startsWith('data:')) dataLine = line.slice(5).trim();
+        else if (line === '') {
+          if ((event === 'complete' || event === 'process_completed') && dataLine) completeData = dataLine;
+          if ((event === 'error' || event === 'process_failed') && dataLine) errorData = dataLine;
+          event = ''; dataLine = '';
+        }
+      }
+      if (completeData || errorData) break;
+      // complete も error も無い: queued 中に SSE が切れた → 少し待って再接続
+      if (attempt < 2) {
+        _stat(`MolScribe: キュー待ち中… 再接続 (${attempt+2}/3)`, 'warn');
+        await new Promise(r => setTimeout(r, 3000));
       }
     }
-    if (errorData) throw new Error('MolScribe サーバエラー: ' + errorData.slice(0, 120));
-    if (!completeData) throw new Error('SSE に complete イベントなし: ' + sseText.slice(0, 120));
+    if (errorData) throw new Error('MolScribe サーバエラー: ' + errorData.slice(0, 200));
+    if (!completeData) throw new Error('SSE に complete イベントなし (3回試行): ' + lastSseText.slice(0, 200));
     const data = JSON.parse(completeData);
     const smiles = (Array.isArray(data) && data[0] || '').trim();
     if (!smiles) throw new Error('SMILES 空');
