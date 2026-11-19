@@ -1266,6 +1266,15 @@ pre.json-pre {
         <span id="claude-key-status"></span>
       </div>
       <div class="api-key-row">
+        <span class="api-key-label claude">Claude モデル</span>
+        <select id="claude-model-select" onchange="saveClaudeModel(this.value)"
+          style="flex:1;height:28px;padding:0 8px;border:1px solid #bae6fd;border-radius:4px;font-size:12px;background:#fff;min-width:0;">
+          <option value="claude-haiku-4-5">Haiku 4.5 — 速い・安い (論文 1 本 ≈ 0.5-1 円)</option>
+          <option value="claude-sonnet-4-6" selected>Sonnet 4.6 — 精度・コスト均衡 (推奨、1 本 ≈ 2-5 円)</option>
+          <option value="claude-opus-4-7">Opus 4.7 — 最高精度 (1 本 ≈ 10-20 円)</option>
+        </select>
+      </div>
+      <div class="api-key-row">
         <span class="api-key-label hf">HF Token</span>
         <input type="password" id="hf-token-input" placeholder="hf_xxxxxxxxxxxx" autocomplete="off">
         <button class="hf-save-btn" onclick="saveHFToken()">保存</button>
@@ -1274,8 +1283,8 @@ pre.json-pre {
       </div>
       <div style="font-size:11px;color:var(--gray-500);padding:4px 10px 2px;line-height:1.4;">
         <b>各キーの役割</b>:
-        <br>• <b>Gemini</b>: PDF 解析・画像認識の既定 (無料枠 20 RPD → <a href="https://aistudio.google.com/" target="_blank" rel="noopener" style="color:var(--blue-mid);">Google Cloud で課金設定すると 1,000 RPD+</a>)
-        <br>• <b>Anthropic</b>: Gemini 枯渇時の受け皿 (Haiku 4.5 で論文 1 本 ≈ 3 円、スキーマ遵守に強い)
+        <br>• <b>Anthropic Claude</b>: PDF 解析・画像認識の<b>主系統 (精度優先)</b>。スキーマ遵守が最強。Sonnet 4.6 推奨 (論文 1 本 ≈ 2-5 円)
+        <br>• <b>Gemini</b>: Claude 未設定/失敗時のフォールバック (無料枠 20 RPD → <a href="https://aistudio.google.com/" target="_blank" rel="noopener" style="color:var(--blue-mid);">Google Cloud で課金設定すると 1,000 RPD+</a>)
         <br>• <b>HF Token</b>: <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener" style="color:var(--blue-mid);">huggingface.co/settings/tokens</a> で read 権限を発行 → MolScribe のクォータ増枠 + DECIMER 有効化
       </div>
     </div>
@@ -2049,16 +2058,15 @@ function _extractGeminiText(candidate) {
 // =============================================
 // Claude (Anthropic Messages API) ラッパ
 // CORS: ブラウザから直接叩くため anthropic-dangerous-direct-browser-access が必要
+// モデルはユーザが ⚙ で選択 (Haiku / Sonnet / Opus)
 // =============================================
-const CLAUDE_MODEL_DEFAULT = 'claude-haiku-4-5';   // 速い・安い・PDF OK
-const CLAUDE_MODEL_STRONG  = 'claude-sonnet-4-6';  // 高精度フォールバック
 
 async function _callClaude(opts) {
   const { model, system, content, maxTokens, temperature } = opts;
   const key = localStorage.getItem(_CLAUDE_KEY_KEY);
   if (!key) throw new Error('Anthropic API Key 未設定');
   const body = {
-    model: model || CLAUDE_MODEL_DEFAULT,
+    model: model || _getClaudeModel(),
     max_tokens: maxTokens || 4096,
     messages: [{ role: 'user', content: Array.isArray(content) ? content : [{ type: 'text', text: String(content) }] }],
   };
@@ -2146,7 +2154,16 @@ async function fetchGeminiPolymerCard(tok) {
       generationConfig: { responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } }
     });
     let text = null, lastErr = null, rawData = null;
-    if (key) {
+    // 精度優先: Claude 先 → Gemini フォールバック
+    if (claudeKey) {
+      try {
+        text = await _callClaude({
+          model: _getClaudeModel(), maxTokens: 2048,
+          content: prompt + '\n\n純粋な JSON のみ返してください。',
+        });
+      } catch (e) { lastErr = `Claude: ${e.message || e}`; }
+    }
+    if (!text && key) {
       outer: for (const model of models) {
         for (let attempt = 0; attempt < 3; attempt++) {
           try {
@@ -2176,15 +2193,6 @@ async function fetchGeminiPolymerCard(tok) {
           } catch (e) { lastErr = `fetch error (${model}): ${e.message}`; continue outer; }
         }
       }
-    }
-    // Claude フォールバック
-    if (!text && claudeKey) {
-      try {
-        text = await _callClaude({
-          model: CLAUDE_MODEL_DEFAULT, maxTokens: 2048,
-          content: prompt + '\n\n純粋な JSON のみ返してください。',
-        });
-      } catch (e) { lastErr = `Claude: ${e.message || e}`; }
     }
     if (!text) { _geminiLastError = lastErr || 'unknown'; console.warn('Polymer card search failed:', lastErr, rawData); return null; }
 
@@ -2364,9 +2372,18 @@ function clearPolymerSearch() {
 // =============================================
 // API キー管理（Gemini + Anthropic + HuggingFace）
 // =============================================
-const _HF_TOKEN_KEY    = 'hf_inference_token';
-const _GEMINI_KEY_KEY  = 'gemini_api_key';
-const _CLAUDE_KEY_KEY  = 'anthropic_api_key';
+const _HF_TOKEN_KEY     = 'hf_inference_token';
+const _GEMINI_KEY_KEY   = 'gemini_api_key';
+const _CLAUDE_KEY_KEY   = 'anthropic_api_key';
+const _CLAUDE_MODEL_KEY = 'anthropic_model';
+
+function _getClaudeModel() {
+  return localStorage.getItem(_CLAUDE_MODEL_KEY) || 'claude-sonnet-4-6';
+}
+function saveClaudeModel(val) {
+  if (!val) return;
+  localStorage.setItem(_CLAUDE_MODEL_KEY, val);
+}
 
 function toggleHFSettings() {
   const bar = document.getElementById('hf-settings-bar');
@@ -2376,6 +2393,8 @@ function toggleHFSettings() {
     document.getElementById('hf-token-input').value    = localStorage.getItem(_HF_TOKEN_KEY)   ? '（保存済）' : '';
     document.getElementById('gemini-key-input').value  = localStorage.getItem(_GEMINI_KEY_KEY) ? '（保存済）' : '';
     document.getElementById('claude-key-input').value  = localStorage.getItem(_CLAUDE_KEY_KEY) ? '（保存済）' : '';
+    const ms = document.getElementById('claude-model-select');
+    if (ms) ms.value = _getClaudeModel();
     updateHFStatus();
   }
 }
@@ -3021,7 +3040,33 @@ PI 共重合体 "PI-0.25" (TAHQ-m-tolidine-3,4-ODA 系) の抽出結果:
   });
 
   let text = null, lastErr = null;
-  if (key) {
+  const claudeKey = localStorage.getItem(_CLAUDE_KEY_KEY);
+
+  // 精度優先: Claude キーがあれば最初に Claude (選択モデル → Sonnet)
+  if (claudeKey) {
+    const selected = _getClaudeModel();
+    const claudeModels = selected === 'claude-sonnet-4-6' ? [selected] : [selected, 'claude-sonnet-4-6'];
+    for (const cm of claudeModels) {
+      try {
+        _startPdfElapsed(s => `🤖 Claude (${cm}) 解析中… ${s}s 経過`);
+        text = await _callClaude({
+          model: cm,
+          maxTokens: 16000,
+          content: [
+            { type: 'document', source: _claudeSource(base64, 'application/pdf') },
+            { type: 'text', text: prompt + '\n\n# 出力形式\n純粋な JSON のみを返してください。コードブロックや説明文は不要です。' },
+          ],
+        });
+        if (text) break;
+      } catch (e) {
+        lastErr = `Claude (${cm}): ${e.message || e}`;
+        _setPdfStatus(`🤖 ${lastErr}`);
+      }
+    }
+  }
+
+  // Claude 失敗 or 未設定 → Gemini にフォールバック
+  if (!text && key) {
     outer: for (const model of models) {
       for (let attempt = 0; attempt < 3; attempt++) {
         try {
@@ -3051,31 +3096,8 @@ PI 共重合体 "PI-0.25" (TAHQ-m-tolidine-3,4-ODA 系) の抽出結果:
     }
   }
 
-  // Gemini 失敗 or 未設定 → Claude Haiku → Sonnet にフォールバック
-  if (!text) {
-    const claudeKey = localStorage.getItem(_CLAUDE_KEY_KEY);
-    if (claudeKey) {
-      const claudeModels = [CLAUDE_MODEL_DEFAULT, CLAUDE_MODEL_STRONG];
-      for (const cm of claudeModels) {
-        try {
-          _startPdfElapsed(s => `🤖 Claude (${cm}) 解析中… ${s}s 経過`);
-          text = await _callClaude({
-            model: cm,
-            maxTokens: 16000,
-            content: [
-              { type: 'document', source: _claudeSource(base64, 'application/pdf') },
-              { type: 'text', text: prompt + '\n\n# 出力形式\n純粋な JSON のみを返してください。コードブロックや説明文は不要です。' },
-            ],
-          });
-          if (text) break;
-        } catch (e) {
-          lastErr = `Claude (${cm}): ${e.message || e}`;
-          _setPdfStatus(`🤖 ${lastErr}`);
-        }
-      }
-    } else if (!key) {
-      lastErr = 'Gemini / Anthropic キー両方未設定';
-    }
+  if (!text && !key && !claudeKey) {
+    lastErr = 'Gemini / Anthropic キー両方未設定';
   }
 
   if (!text) throw new Error(lastErr || '全 AI プロバイダ到達不可');
@@ -4116,7 +4138,7 @@ Rules:
 
   async function tryClaude() {
     const text = await _callClaude({
-      model: CLAUDE_MODEL_DEFAULT,
+      model: _getClaudeModel(),
       maxTokens: 512,
       content: [
         { type: 'image', source: _claudeSource(base64, mime) },
@@ -4263,7 +4285,15 @@ Example output: [{"name":"bisphenol A","smiles":"Oc1ccc(C(C)(C)c2ccc(O)cc2)cc1",
     const body = JSON.stringify({ generationConfig: { thinkingConfig: { thinkingBudget: 0 } }, contents: [{ parts: [{ text: prompt }]}]});
     let text = '';
     let res, lastStatus;
-    if (key) {
+    // 精度優先: Claude 先 → Gemini フォールバック
+    if (claudeKey) {
+      updateMonomerSection(cardId, null, `Claude (${_getClaudeModel()}) でモノマー逆推定中…`);
+      try {
+        text = (await _callClaude({ model: _getClaudeModel(), maxTokens: 2048, content: prompt })).trim();
+      } catch (e) { /* 失敗したら Gemini へ */ }
+    }
+    if (!text && key) {
+      updateMonomerSection(cardId, null, 'Gemini でモノマー逆推定中…');
       outer: for (const model of models) {
         for (let attempt = 0; attempt < 3; attempt++) {
           res = await fetch(
@@ -4282,14 +4312,7 @@ Example output: [{"name":"bisphenol A","smiles":"Oc1ccc(C(C)(C)c2ccc(O)cc2)cc1",
         text = _extractGeminiText(data?.candidates?.[0]).trim();
       }
     }
-    // Gemini 失敗 or 未設定 → Claude フォールバック
-    if (!text && claudeKey) {
-      updateMonomerSection(cardId, null, 'Claude Haiku でモノマー逆推定中…');
-      try {
-        text = (await _callClaude({ model: CLAUDE_MODEL_DEFAULT, maxTokens: 2048, content: prompt })).trim();
-      } catch (e) { throw new Error(`Claude: ${e.message || e}`); }
-    }
-    if (!text) throw new Error(`Gemini ${lastStatus || 'empty'} / Claude 未設定 or 失敗`);
+    if (!text) throw new Error(`Claude 未設定/失敗 かつ Gemini ${lastStatus || '未設定/empty'}`);
     const jsonText = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
     let monomers;
     try { monomers = JSON.parse(jsonText); }
