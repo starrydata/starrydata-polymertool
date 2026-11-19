@@ -258,6 +258,20 @@ body {
 }
 .sample-copy-btn:hover { background: #4338ca; }
 .sample-copy-btn.ok { background: #16a34a; border-color: #15803d; }
+.sample-decompose-btn {
+  font-size: 10px; margin-left: 6px; padding: 2px 6px;
+  border: 1px solid #c7d2fe; background: #eef2ff; color: #4338ca;
+  border-radius: 3px; cursor: pointer; white-space: nowrap;
+}
+.sample-decompose-btn:hover { background: #c7d2fe; }
+.sample-decompose-btn:disabled { opacity: 0.6; cursor: wait; }
+.sample-download-btn {
+  font-size: 12px; font-weight: 600;
+  padding: 6px 12px; margin-left: 10px;
+  background: #0f766e; color: white; border: 1px solid #0d9488;
+  border-radius: 6px; cursor: pointer;
+}
+.sample-download-btn:hover { background: #115e59; }
 .sample-card .paper-synth { display: none; }
 .sample-card.open .paper-synth { display: block; }
 .pdf-status { font-size: 12px; color: var(--gray-500); padding: 4px 2px; }
@@ -3347,6 +3361,146 @@ function _buildMethodJson(sample) {
   return [{ steps }];
 }
 
+// ポリマー element の SMILES → monomers に分解 (Claude 優先, Gemini フォールバック)
+async function _decomposeElementMonomers(sid, ci, ei, btn) {
+  const sample = _pdfSamplesById.get(sid);
+  if (!sample) return;
+  const comp = (sample.components || [])[ci];
+  const el = comp && (comp.elements || [])[ei];
+  if (!el || !el.smiles) return;
+
+  const origText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '🔬 分解中…';
+
+  const prompt = `You are an expert polymer chemist. Given the SMILES of a polymer repeat unit (BigSMILES with [$]/[<]/[>] or standard SMILES), identify the ORIGINAL monomer(s) that would produce it via a standard synthesis route.
+
+Polymer repeat unit: ${el.smiles}
+${el.polymerizableGroup ? `Polymerizable group hint: ${el.polymerizableGroup}` : ''}
+${el.name ? `Repeat unit name: ${el.name}` : ''}
+
+Rules:
+- Respond with ONLY a JSON array. No markdown, no explanation, no code block.
+- Each element: {"name": "common name", "smiles": "compound SMILES with no [$]", "role": "brief role e.g. bisphenol, diamine, dianhydride, vinyl monomer, diol, diisocyanate"}
+- Include all distinct monomers needed for the synthesis (typically 1-3 monomers).
+- Use canonical, small-molecule SMILES (no polymer notation, no [$] [<] [>]).
+- If uncertain, provide your best inference — do not return an empty array.
+
+Example: [{"name":"bisphenol A","smiles":"Oc1ccc(C(C)(C)c2ccc(O)cc2)cc1","role":"bisphenol"}]`;
+
+  try {
+    const claudeKey = localStorage.getItem(_CLAUDE_KEY_KEY);
+    const geminiKey = localStorage.getItem(_GEMINI_KEY_KEY);
+    let text = '';
+    // 精度優先: Claude 先
+    if (claudeKey) {
+      try {
+        text = (await _callClaude({ model: _getClaudeModel(), maxTokens: 2048, content: prompt })).trim();
+      } catch (e) { console.warn('[decompose] Claude failed:', e.message); }
+    }
+    // Claude 失敗/未設定 → Gemini
+    if (!text && geminiKey) {
+      const gemModels = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+      const body = JSON.stringify({ generationConfig: { thinkingConfig: { thinkingBudget: 0 } }, contents: [{ parts: [{ text: prompt }]}]});
+      for (const m of gemModels) {
+        try {
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1/models/${m}:generateContent?key=${geminiKey}`,
+            { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+          if (res.ok) {
+            const data = await res.json();
+            text = _extractGeminiText(data?.candidates?.[0]).trim();
+            if (text) break;
+          }
+        } catch (_) {}
+      }
+    }
+    if (!text) throw new Error('Claude / Gemini どちらも失敗 or 未設定');
+
+    const jsonText = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
+    let monomers;
+    try { monomers = JSON.parse(jsonText); }
+    catch (_) {
+      const m = jsonText.match(/\[[\s\S]*\]/);
+      if (!m) throw new Error('JSON not found in response');
+      monomers = JSON.parse(m[0]);
+    }
+    if (!Array.isArray(monomers) || !monomers.length) throw new Error('monomers 配列が空');
+    monomers = monomers.filter(m => m && typeof m === 'object' && m.smiles);
+
+    // 結果を element.monomers に保存して再レンダ
+    el.monomers = monomers;
+    _rerenderSampleCards();
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = `✗ ${(e.message || e).slice(0, 40)}`;
+    setTimeout(() => { btn.textContent = origText; }, 3000);
+  }
+}
+
+// 現在表示中の sample カード全体を再レンダ
+// sample オブジェクトは参照保持されているので、_currentParsed 経由で完全再描画
+function _rerenderSampleCards() {
+  if (!_currentParsed) return;
+  _renderPaperAnalysis(_currentParsed, _currentFilename);
+}
+
+// 全 sample を Starrydata の sample descriptor 形式でまとめて 1 ファイルにダウンロード
+function _buildFullStarrydataJson() {
+  if (!_currentParsed) return null;
+  const info = _currentParsed.paperInfo || {};
+  // _pdfSamplesById は現在表示中の sample オブジェクト (分解結果込み) を保持
+  const samples = Array.from(_pdfSamplesById.values());
+  const out = {
+    paperInfo: {
+      title: info.title || '',
+      authors: info.authors || [],
+      doi: info.doi || '',
+      journal: info.journal || '',
+      year: info.year || null,
+    },
+    exportedAt: new Date().toISOString(),
+    samplesCount: samples.length,
+    samples: samples.map(s => ({
+      sampleName: s.sampleName || '',
+      materialType: s.materialType || '',
+      compositionClass: s.compositionClass || '',
+      polymerClass: s.polymerClass || '',
+      properties: s.properties || '',
+      // Starrydata Excel 貼付用 free text JSON (reactivity / method)
+      reactivity: _buildReactivityJson(s),
+      method: _buildMethodJson(s),
+      // 補足: 完全な components / additives / figures も保持 (将来の再読込・比較用)
+      components: s.components || [],
+      additives: s.additives || [],
+    })),
+    figures: Array.isArray(_currentParsed.figures) ? _currentParsed.figures : [],
+  };
+  return out;
+}
+
+function _downloadPaperJson() {
+  const obj = _buildFullStarrydataJson();
+  if (!obj) { alert('まだ PDF が解析されていません'); return; }
+  const info = obj.paperInfo || {};
+  // ファイル名: DOI > title > filename、サニタイズ
+  let baseName = (info.doi || info.title || _currentFilename || 'polymertool_export')
+    .toString()
+    .replace(/[^A-Za-z0-9._-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+    .slice(0, 80) || 'polymertool_export';
+  const ts = new Date().toISOString().slice(0, 10);  // YYYY-MM-DD
+  const filename = `${baseName}_${ts}.json`;
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
+}
+
 async function copySampleField(sid, field, btn) {
   const sample = _pdfSamplesById.get(sid);
   if (!sample) return;
@@ -3368,8 +3522,13 @@ function _renderSampleCard(sample, idx) {
   const comps = (sample.components || []).filter(c => c && (c.name || c.polymerDropdown));
   const adds = (sample.additives || []).filter(a => a && a.name);
 
+  // sid を先に確定 (element ボタンのコールバックで使うため)
+  const sid = ++_pdfSampleId;
+  _pdfSamplesById.set(sid, sample);
+
   let compRows = '';
-  for (const c of comps) {
+  for (let ci = 0; ci < comps.length; ci++) {
+    const c = comps[ci];
     const label = c.polymerDropdown && c.polymerDropdown !== 'Other' ? c.polymerDropdown : (c.abbreviation || c.name || '?');
     compRows += `
       <tr>
@@ -3380,17 +3539,47 @@ function _renderSampleCard(sample, idx) {
         <td class="num">${esc(_num(c.weightRatio))}</td>
         <td class="num">${esc(_num(c.molarRatio))}</td>
       </tr>`;
-    for (const el of (c.elements || [])) {
+    const els = c.elements || [];
+    for (let ei = 0; ei < els.length; ei++) {
+      const el = els[ei];
       if (!el || !(el.smiles || el.name)) continue;
+      const smiAttr = (el.smiles || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+      const canDecompose = !!(el.smiles || '').trim();
+      const decomposeBtn = canDecompose
+        ? `<button class="sample-decompose-btn" onclick="_decomposeElementMonomers(${sid},${ci},${ei},this)" title="ポリマー → モノマー分解 (Claude / Gemini)">🔬 分解</button>`
+        : '';
       compRows += `
         <tr style="background:#f8fafc;">
           <td style="padding-left:20px;font-size:10px;color:var(--gray-400);">└ element</td>
-          <td style="font-size:10.5px;">${esc(el.name || '')}${el.polymerizableGroup ? `<br><span style="font-size:10px;color:#92400e;">PG: ${esc(el.polymerizableGroup)}</span>` : ''}${el.smiles ? `<br><span style="font-family:var(--mono);font-size:10px;color:var(--gray-500);word-break:break-all;">${esc(el.smiles)}</span>` : ''}</td>
+          <td style="font-size:10.5px;">${esc(el.name || '')}${el.polymerizableGroup ? `<br><span style="font-size:10px;color:#92400e;">PG: ${esc(el.polymerizableGroup)}</span>` : ''}${el.smiles ? `<br><span style="font-family:var(--mono);font-size:10px;color:var(--gray-500);word-break:break-all;">${esc(el.smiles)}</span>` : ''}${decomposeBtn}</td>
           <td></td>
           <td class="num">${esc(_num(el.mw))}${el.molecularVolume ? `<br><span style="font-size:10px;color:var(--gray-400);">V=${esc(_num(el.molecularVolume))}</span>` : ''}</td>
           <td class="num">${esc(_num(el.weightRatio))}</td>
           <td class="num">${esc(_num(el.molarRatio))}</td>
         </tr>`;
+      // element.monomers が存在すれば表示
+      if (Array.isArray(el.monomers) && el.monomers.length) {
+        const mRows = el.monomers.map((m, mi) => {
+          if (!m) return '';
+          const mSmi = (m.smiles || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+          return `
+            <div style="display:flex;gap:6px;align-items:flex-start;padding:4px 0;border-top:1px dashed #e2e8f0;font-size:11px;">
+              <span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:3px;font-weight:600;white-space:nowrap;">M${mi+1}</span>
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;color:#1e293b;">${esc(m.name || '')} <span style="font-size:10px;color:var(--gray-500);font-weight:400;">${esc(m.role || '')}</span></div>
+                ${m.smiles ? `<div style="font-family:var(--mono);font-size:10px;color:var(--gray-500);word-break:break-all;">${esc(m.smiles)}</div>` : ''}
+              </div>
+              <button type="button" class="sample-decompose-btn" style="padding:2px 6px;font-size:10px;" onclick="navigator.clipboard.writeText('${mSmi}');this.textContent='✓';setTimeout(()=>this.textContent='📋',900)" title="SMILES コピー">📋</button>
+            </div>`;
+        }).filter(Boolean).join('');
+        if (mRows) {
+          compRows += `
+            <tr style="background:#eff6ff;"><td></td><td colspan="5" style="padding:4px 8px;">
+              <div style="font-size:11px;font-weight:600;color:#1d4ed8;margin-bottom:2px;">🔬 分解されたモノマー (${el.monomers.length}):</div>
+              ${mRows}
+            </td></tr>`;
+        }
+      }
     }
   }
 
@@ -3412,8 +3601,6 @@ function _renderSampleCard(sample, idx) {
     ? `<div class="sample-synth-toggle" onclick="this.parentElement.classList.toggle('open')">▾ 合成条件・物性を表示</div>${synthHtml}`
     : '';
 
-  const sid = ++_pdfSampleId;
-  _pdfSamplesById.set(sid, sample);
   const hasReactivity = (sample?.components || []).some(c => (c?.elements || []).some(e => e && (e.smiles || e.name)));
   const hasMethod = Array.isArray(sample?.synthesis?.steps) && sample.synthesis.steps.length > 0;
 
@@ -3526,6 +3713,10 @@ function _renderFiguresSection(figures) {
     </div>`;
 }
 
+// 現在読み込み中の論文の生 parsed データと filename を保持 (ダウンロード用)
+let _currentParsed = null;
+let _currentFilename = '';
+
 function _renderPaperAnalysis(parsed, filename) {
   const metaEl = document.getElementById('pdf-meta');
   const itemsEl = document.getElementById('pdf-items');
@@ -3533,10 +3724,14 @@ function _renderPaperAnalysis(parsed, filename) {
   const samples = Array.isArray(parsed.samples) ? parsed.samples : [];
   _pdfSamplesById.clear();
   _pdfSampleId = 0;
+  _currentParsed = parsed;
+  _currentFilename = filename;
 
   metaEl.innerHTML = `
     <div class="paper-meta">
-      <div class="pm-title">${esc(info.title || filename)}</div>
+      <div class="pm-title">${esc(info.title || filename)}
+        <button class="sample-download-btn" onclick="_downloadPaperJson()" title="Starrydata 形式 (sample descriptor) で全データを JSON ダウンロード">📥 JSON ダウンロード</button>
+      </div>
       <div class="pm-sub">
         ${info.authors?.length ? esc(info.authors.slice(0,3).join(', ')) + (info.authors.length > 3 ? ' et al.' : '') : ''}
         ${info.journal ? ` · ${esc(info.journal)}` : ''}
