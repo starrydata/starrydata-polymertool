@@ -1013,6 +1013,7 @@ pre.json-pre {
 .api-key-row { display: flex; align-items: center; gap: 8px; }
 .api-key-label { font-weight: 700; white-space: nowrap; min-width: 100px; }
 .api-key-label.gemini { color: #1a73e8; }
+.api-key-label.claude { color: #c2410c; }
 .api-key-label.hf     { color: #0369a1; }
 .api-key-row input {
   flex: 1; height: 28px; padding: 0 8px; border: 1px solid #bae6fd;
@@ -1026,6 +1027,8 @@ pre.json-pre {
 .hf-save-btn:hover { background: #0369a1; }
 .hf-save-btn.gemini-btn { background: #1a73e8; }
 .hf-save-btn.gemini-btn:hover { background: #1557b0; }
+.hf-save-btn.claude-btn { background: #c2410c; }
+.hf-save-btn.claude-btn:hover { background: #9a3412; }
 .hf-clear-btn {
   height: 28px; padding: 0 8px; background: #fff; color: var(--gray-600);
   border: 1px solid var(--gray-200); border-radius: 4px; font-size: 11px; font-family: var(--font); cursor: pointer;
@@ -1243,12 +1246,24 @@ pre.json-pre {
       <input type="file" id="imgSearchInput" accept="image/*" style="display:none" onchange="handleImageFile(this.files[0])">
     </div>
     <div id="hf-settings-bar">
+      <div style="font-size:11px;color:#374151;padding:6px 10px 8px;line-height:1.5;background:#eff6ff;border-bottom:1px solid #dbeafe;">
+        🔐 <b>入力した API キーはあなたのブラウザ内 (LocalStorage) にのみ保存されます</b>。
+        GitHub Pages サーバや他ユーザーには<b>一切送信・共有されません</b>。
+        共有 PC で使う場合は使用後に「削除」してください。
+      </div>
       <div class="api-key-row">
         <span class="api-key-label gemini">Gemini API Key</span>
         <input type="password" id="gemini-key-input" placeholder="AIzaSy…（aistudio.google.com で取得）" autocomplete="off">
         <button class="hf-save-btn gemini-btn" onclick="saveGeminiKey()">保存</button>
         <button class="hf-clear-btn" onclick="clearGeminiKey()">削除</button>
         <span id="gemini-key-status"></span>
+      </div>
+      <div class="api-key-row">
+        <span class="api-key-label claude">Anthropic API Key</span>
+        <input type="password" id="claude-key-input" placeholder="sk-ant-…（console.anthropic.com で取得）" autocomplete="off">
+        <button class="hf-save-btn claude-btn" onclick="saveClaudeKey()">保存</button>
+        <button class="hf-clear-btn" onclick="clearClaudeKey()">削除</button>
+        <span id="claude-key-status"></span>
       </div>
       <div class="api-key-row">
         <span class="api-key-label hf">HF Token</span>
@@ -1258,10 +1273,10 @@ pre.json-pre {
         <span id="hf-token-status"></span>
       </div>
       <div style="font-size:11px;color:var(--gray-500);padding:4px 10px 2px;line-height:1.4;">
-        <b>HF Token を設定すると</b>:
-        MolScribe の ZeroGPU クォータが大幅増 (匿名 180s/window → 認証 300-1500s/日) + DECIMER 有効化。
-        <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener" style="color:var(--blue-mid);">huggingface.co/settings/tokens</a>
-        で read 権限の token を発行してください (ブラウザから直接貼り付け、どこにも送信されません)。
+        <b>各キーの役割</b>:
+        <br>• <b>Gemini</b>: PDF 解析・画像認識の既定 (無料枠 20 RPD → <a href="https://aistudio.google.com/" target="_blank" rel="noopener" style="color:var(--blue-mid);">Google Cloud で課金設定すると 1,000 RPD+</a>)
+        <br>• <b>Anthropic</b>: Gemini 枯渇時の受け皿 (Haiku 4.5 で論文 1 本 ≈ 3 円、スキーマ遵守に強い)
+        <br>• <b>HF Token</b>: <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener" style="color:var(--blue-mid);">huggingface.co/settings/tokens</a> で read 権限を発行 → MolScribe のクォータ増枠 + DECIMER 有効化
       </div>
     </div>
     <!-- 認識スロット (複数画像を同時に保持) -->
@@ -2031,9 +2046,63 @@ function _extractGeminiText(candidate) {
   return out;
 }
 
+// =============================================
+// Claude (Anthropic Messages API) ラッパ
+// CORS: ブラウザから直接叩くため anthropic-dangerous-direct-browser-access が必要
+// =============================================
+const CLAUDE_MODEL_DEFAULT = 'claude-haiku-4-5';   // 速い・安い・PDF OK
+const CLAUDE_MODEL_STRONG  = 'claude-sonnet-4-6';  // 高精度フォールバック
+
+async function _callClaude(opts) {
+  const { model, system, content, maxTokens, temperature } = opts;
+  const key = localStorage.getItem(_CLAUDE_KEY_KEY);
+  if (!key) throw new Error('Anthropic API Key 未設定');
+  const body = {
+    model: model || CLAUDE_MODEL_DEFAULT,
+    max_tokens: maxTokens || 4096,
+    messages: [{ role: 'user', content: Array.isArray(content) ? content : [{ type: 'text', text: String(content) }] }],
+  };
+  if (system) body.system = system;
+  if (typeof temperature === 'number') body.temperature = temperature;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const errBody = await res.text().catch(() => '');
+    throw new Error(`Claude ${res.status}: ${errBody.slice(0, 200)}`);
+  }
+  const data = await res.json();
+  const parts = Array.isArray(data?.content) ? data.content : [];
+  let out = '';
+  for (const p of parts) { if (p?.type === 'text' && typeof p.text === 'string') out += p.text; }
+  if (!out) throw new Error('Claude レスポンスに text なし: ' + JSON.stringify(data).slice(0, 200));
+  return out;
+}
+
+// Base64 の dataURL から Claude 用の image / document ソースを作る
+function _claudeSource(dataUrlOrB64, mimeType) {
+  let b64 = dataUrlOrB64;
+  let mt = mimeType;
+  if (dataUrlOrB64.startsWith('data:')) {
+    const comma = dataUrlOrB64.indexOf(',');
+    mt = mt || dataUrlOrB64.substring(5, dataUrlOrB64.indexOf(';'));
+    b64 = dataUrlOrB64.substring(comma + 1);
+  }
+  return { type: 'base64', media_type: mt || 'application/octet-stream', data: b64 };
+}
+
 async function fetchGeminiPolymerCard(tok) {
   const key = localStorage.getItem(_GEMINI_KEY_KEY);
-  if (!key) { _geminiLastError = 'Gemini キー未設定'; return null; }
+  const claudeKey = localStorage.getItem(_CLAUDE_KEY_KEY);
+  if (!key && !claudeKey) { _geminiLastError = 'Gemini / Anthropic キー未設定'; return null; }
 
   const cache = _loadGeminiCache();
   const cacheKey = tok.toLowerCase().trim();
@@ -2077,36 +2146,47 @@ async function fetchGeminiPolymerCard(tok) {
       generationConfig: { responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } }
     });
     let text = null, lastErr = null, rawData = null;
-    outer: for (const model of models) {
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-          const res = await fetch(
-            `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${key}`,
-            { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }
-          );
-          if (res.status === 503 || res.status === 429) {
-            const wait = 1500 * Math.pow(2, attempt); // 1.5s → 3s → 6s
-            lastErr = `Gemini ${res.status} (${model}, ${attempt+1}/3) — ${wait/1000}秒待機`;
-            if (attempt < 2) { await new Promise(r => setTimeout(r, wait)); continue; }
-            continue outer;
-          }
-          if (!res.ok) {
-            const errBody = await res.text().catch(() => '');
-            lastErr = `Gemini ${res.status} (${model}): ${errBody.slice(0, 200)}`;
-            continue outer;
-          }
-          rawData = await res.json();
-          text = _extractGeminiText(rawData?.candidates?.[0]);
-          if (!text) {
-            const finishReason = rawData?.candidates?.[0]?.finishReason || 'no-text';
-            lastErr = `Gemini (${model}): empty text (finishReason=${finishReason})`;
-            continue outer;
-          }
-          break outer;
-        } catch (e) { lastErr = `fetch error (${model}): ${e.message}`; continue outer; }
+    if (key) {
+      outer: for (const model of models) {
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const res = await fetch(
+              `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${key}`,
+              { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }
+            );
+            if (res.status === 503 || res.status === 429) {
+              const wait = 1500 * Math.pow(2, attempt); // 1.5s → 3s → 6s
+              lastErr = `Gemini ${res.status} (${model}, ${attempt+1}/3) — ${wait/1000}秒待機`;
+              if (attempt < 2) { await new Promise(r => setTimeout(r, wait)); continue; }
+              continue outer;
+            }
+            if (!res.ok) {
+              const errBody = await res.text().catch(() => '');
+              lastErr = `Gemini ${res.status} (${model}): ${errBody.slice(0, 200)}`;
+              continue outer;
+            }
+            rawData = await res.json();
+            text = _extractGeminiText(rawData?.candidates?.[0]);
+            if (!text) {
+              const finishReason = rawData?.candidates?.[0]?.finishReason || 'no-text';
+              lastErr = `Gemini (${model}): empty text (finishReason=${finishReason})`;
+              continue outer;
+            }
+            break outer;
+          } catch (e) { lastErr = `fetch error (${model}): ${e.message}`; continue outer; }
+        }
       }
     }
-    if (!text) { _geminiLastError = lastErr || 'unknown'; console.warn('Gemini search failed:', lastErr, rawData); return null; }
+    // Claude フォールバック
+    if (!text && claudeKey) {
+      try {
+        text = await _callClaude({
+          model: CLAUDE_MODEL_DEFAULT, maxTokens: 2048,
+          content: prompt + '\n\n純粋な JSON のみ返してください。',
+        });
+      } catch (e) { lastErr = `Claude: ${e.message || e}`; }
+    }
+    if (!text) { _geminiLastError = lastErr || 'unknown'; console.warn('Polymer card search failed:', lastErr, rawData); return null; }
 
     try {
       const cleaned = text.trim().replace(/^```(?:json)?\n?|\n?```$/g, '');
@@ -2282,10 +2362,11 @@ function clearPolymerSearch() {
 }
 
 // =============================================
-// API キー管理（Gemini + HuggingFace）
+// API キー管理（Gemini + Anthropic + HuggingFace）
 // =============================================
 const _HF_TOKEN_KEY    = 'hf_inference_token';
 const _GEMINI_KEY_KEY  = 'gemini_api_key';
+const _CLAUDE_KEY_KEY  = 'anthropic_api_key';
 
 function toggleHFSettings() {
   const bar = document.getElementById('hf-settings-bar');
@@ -2294,6 +2375,7 @@ function toggleHFSettings() {
   if (open) {
     document.getElementById('hf-token-input').value    = localStorage.getItem(_HF_TOKEN_KEY)   ? '（保存済）' : '';
     document.getElementById('gemini-key-input').value  = localStorage.getItem(_GEMINI_KEY_KEY) ? '（保存済）' : '';
+    document.getElementById('claude-key-input').value  = localStorage.getItem(_CLAUDE_KEY_KEY) ? '（保存済）' : '';
     updateHFStatus();
   }
 }
@@ -2310,6 +2392,18 @@ function clearGeminiKey() {
   document.getElementById('gemini-key-input').value = '';
   updateHFStatus();
 }
+function saveClaudeKey() {
+  const val = document.getElementById('claude-key-input').value.trim();
+  if (!val || val === '（保存済）') return;
+  localStorage.setItem(_CLAUDE_KEY_KEY, val);
+  document.getElementById('claude-key-input').value = '（保存済）';
+  updateHFStatus();
+}
+function clearClaudeKey() {
+  localStorage.removeItem(_CLAUDE_KEY_KEY);
+  document.getElementById('claude-key-input').value = '';
+  updateHFStatus();
+}
 function saveHFToken() {
   const val = document.getElementById('hf-token-input').value.trim();
   if (!val || val === '（保存済）') return;
@@ -2324,8 +2418,10 @@ function clearHFToken() {
 }
 function updateHFStatus() {
   const g = document.getElementById('gemini-key-status');
+  const c = document.getElementById('claude-key-status');
   const h = document.getElementById('hf-token-status');
   if (g) { const v = localStorage.getItem(_GEMINI_KEY_KEY); g.className = v ? 'hf-status-ok' : 'hf-status-none'; g.textContent = v ? '✓ 設定済' : '未設定'; }
+  if (c) { const v = localStorage.getItem(_CLAUDE_KEY_KEY); c.className = v ? 'hf-status-ok' : 'hf-status-none'; c.textContent = v ? '✓ 設定済' : '未設定'; }
   if (h) { const v = localStorage.getItem(_HF_TOKEN_KEY);   h.className = v ? 'hf-status-ok' : 'hf-status-none'; h.textContent = v ? '✓ 設定済' : '未設定'; }
 }
 
@@ -2367,8 +2463,9 @@ async function handlePdfFile(file) {
     return;
   }
   const key = localStorage.getItem(_GEMINI_KEY_KEY);
-  if (!key) {
-    _setPdfStatus('❌ Gemini API キー未設定。⚙ から登録してください', true);
+  const claudeKey = localStorage.getItem(_CLAUDE_KEY_KEY);
+  if (!key && !claudeKey) {
+    _setPdfStatus('❌ Gemini / Anthropic キーのどちらか必要です。⚙ から登録してください', true);
     return;
   }
   _setPdfStatus(`📖 PDF 読込中… (${(file.size/1024/1024).toFixed(1)}MB)`);
@@ -2924,34 +3021,64 @@ PI 共重合体 "PI-0.25" (TAHQ-m-tolidine-3,4-ODA 系) の抽出結果:
   });
 
   let text = null, lastErr = null;
-  outer: for (const model of models) {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        _startPdfElapsed(s => `🤖 Gemini (${model}) 解析中… ${s}s 経過`);
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${key}`,
-          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }
-        );
-        if (res.status === 503 || res.status === 429) {
-          const wait = 2000 * Math.pow(2, attempt);
-          lastErr = `${res.status} (${model}, ${attempt+1}/3) — ${wait/1000}秒待機`;
-          _setPdfStatus(`🤖 ${lastErr}`);
-          if (attempt < 2) { await new Promise(r => setTimeout(r, wait)); continue; }
+  if (key) {
+    outer: for (const model of models) {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          _startPdfElapsed(s => `🤖 Gemini (${model}) 解析中… ${s}s 経過`);
+          const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${key}`,
+            { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }
+          );
+          if (res.status === 503 || res.status === 429) {
+            const wait = 2000 * Math.pow(2, attempt);
+            lastErr = `${res.status} (${model}, ${attempt+1}/3) — ${wait/1000}秒待機`;
+            _setPdfStatus(`🤖 ${lastErr}`);
+            if (attempt < 2) { await new Promise(r => setTimeout(r, wait)); continue; }
+            continue outer;
+          }
+          if (!res.ok) {
+            const errBody = await res.text().catch(() => '');
+            lastErr = `Gemini ${res.status} (${model}): ${errBody.slice(0,200)}`;
+            continue outer;
+          }
+          text = await _streamGeminiSSE(res, model);
+          if (text) break outer;
+          lastErr = `Gemini (${model}): empty stream`;
           continue outer;
-        }
-        if (!res.ok) {
-          const errBody = await res.text().catch(() => '');
-          lastErr = `Gemini ${res.status} (${model}): ${errBody.slice(0,200)}`;
-          continue outer;
-        }
-        text = await _streamGeminiSSE(res, model);
-        if (text) break outer;
-        lastErr = `Gemini (${model}): empty stream`;
-        continue outer;
-      } catch (e) { lastErr = `fetch error (${model}): ${e.message}`; continue outer; }
+        } catch (e) { lastErr = `fetch error (${model}): ${e.message}`; continue outer; }
+      }
     }
   }
-  if (!text) throw new Error(lastErr || 'Gemini unreachable');
+
+  // Gemini 失敗 or 未設定 → Claude Haiku → Sonnet にフォールバック
+  if (!text) {
+    const claudeKey = localStorage.getItem(_CLAUDE_KEY_KEY);
+    if (claudeKey) {
+      const claudeModels = [CLAUDE_MODEL_DEFAULT, CLAUDE_MODEL_STRONG];
+      for (const cm of claudeModels) {
+        try {
+          _startPdfElapsed(s => `🤖 Claude (${cm}) 解析中… ${s}s 経過`);
+          text = await _callClaude({
+            model: cm,
+            maxTokens: 16000,
+            content: [
+              { type: 'document', source: _claudeSource(base64, 'application/pdf') },
+              { type: 'text', text: prompt + '\n\n# 出力形式\n純粋な JSON のみを返してください。コードブロックや説明文は不要です。' },
+            ],
+          });
+          if (text) break;
+        } catch (e) {
+          lastErr = `Claude (${cm}): ${e.message || e}`;
+          _setPdfStatus(`🤖 ${lastErr}`);
+        }
+      }
+    } else if (!key) {
+      lastErr = 'Gemini / Anthropic キー両方未設定';
+    }
+  }
+
+  if (!text) throw new Error(lastErr || '全 AI プロバイダ到達不可');
   const cleaned = text.trim().replace(/^```(?:json)?\n?|\n?```$/g, '');
   return JSON.parse(cleaned);
 }
@@ -3987,10 +4114,34 @@ Rules:
     return smiles;
   }
 
-  // 精度優先: 化学構造式専用モデル → 専用モデル → 汎用 LLM
+  async function tryClaude() {
+    const text = await _callClaude({
+      model: CLAUDE_MODEL_DEFAULT,
+      maxTokens: 512,
+      content: [
+        { type: 'image', source: _claudeSource(base64, mime) },
+        { type: 'text', text:
+`You are an expert chemist specializing in polymer chemistry. Convert the chemical structure in this image to a SMILES string.
+
+Rules:
+- Output ONLY the SMILES on a single line. No markdown, no explanation, no code block.
+- If a polymer repeat unit is shown (brackets / subscript n / wavy bonds), output the SMILES for one repeat unit only.
+- Sulfone -SO2- must be S(=O)(=O), ether -O- as O, amine as N, carbonyl as C=O.
+- Aromatic rings: lowercase (c1ccccc1).
+- Leave open valences as-is (no dummy atoms).
+- If ambiguous, output your best interpretation.` },
+      ],
+    });
+    const smiles = text.trim().split('\n')[0].replace(/^`+|`+$/g, '').trim();
+    if (!smiles) throw new Error('Claude レスポンスに SMILES なし');
+    return smiles;
+  }
+
+  // 精度優先: 化学構造式専用モデル → 専用モデル → 汎用 LLM (Claude → Gemini)
   const labeled = [
     { label: 'MolScribe (自前)',   fn: tryMolScribe },
     { label: 'HF Inference API',  fn: tryHFInference },
+    { label: 'Claude Vision',     fn: tryClaude },
     { label: 'Gemini Vision API', fn: tryGemini },
   ];
 
@@ -4086,11 +4237,12 @@ async function searchBySMILES(smiles) {
 
 async function deduceMonomersFromSmiles(smiles, cardId) {
   const key = localStorage.getItem(_GEMINI_KEY_KEY);
-  if (!key) {
-    updateMonomerSection(cardId, null, 'Gemini API Key 未設定のためモノマー推定はスキップされました');
+  const claudeKey = localStorage.getItem(_CLAUDE_KEY_KEY);
+  if (!key && !claudeKey) {
+    updateMonomerSection(cardId, null, 'Gemini / Anthropic キー未設定のためモノマー推定はスキップされました');
     return;
   }
-  updateMonomerSection(cardId, null, 'Gemini でモノマー逆推定中…');
+  updateMonomerSection(cardId, null, 'モノマー逆推定中…');
   try {
     const prompt = `You are an expert polymer chemist. Given the SMILES of a polymer repeat unit or a compound derived from polymerization, identify the ORIGINAL monomer(s) that would produce it via a standard synthesis route.
 
@@ -4109,24 +4261,35 @@ Example output: [{"name":"bisphenol A","smiles":"Oc1ccc(C(C)(C)c2ccc(O)cc2)cc1",
     // 3.x flash は無料枠 20 RPD、flash-lite は RPD 大
     const models = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
     const body = JSON.stringify({ generationConfig: { thinkingConfig: { thinkingBudget: 0 } }, contents: [{ parts: [{ text: prompt }]}]});
+    let text = '';
     let res, lastStatus;
-    outer: for (const model of models) {
-      for (let attempt = 0; attempt < 3; attempt++) {
-        res = await fetch(
-          `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${key}`,
-          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }
-        );
-        lastStatus = res.status;
-        if (res.ok) break outer;
-        if (res.status !== 503 && res.status !== 429) break;
-        updateMonomerSection(cardId, null, `Gemini 高負荷 (${res.status})… ${(1.5 * Math.pow(2, attempt))}秒待機 (${model})`);
-        await new Promise(r => setTimeout(r, 1500 * Math.pow(2, attempt)));
+    if (key) {
+      outer: for (const model of models) {
+        for (let attempt = 0; attempt < 3; attempt++) {
+          res = await fetch(
+            `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${key}`,
+            { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }
+          );
+          lastStatus = res.status;
+          if (res.ok) break outer;
+          if (res.status !== 503 && res.status !== 429) break;
+          updateMonomerSection(cardId, null, `Gemini 高負荷 (${res.status})… ${(1.5 * Math.pow(2, attempt))}秒待機 (${model})`);
+          await new Promise(r => setTimeout(r, 1500 * Math.pow(2, attempt)));
+        }
+      }
+      if (res && res.ok) {
+        const data = await res.json();
+        text = _extractGeminiText(data?.candidates?.[0]).trim();
       }
     }
-    if (!res || !res.ok) throw new Error(`Gemini ${lastStatus || 'error'}`);
-    const data = await res.json();
-    const text = _extractGeminiText(data?.candidates?.[0]).trim();
-    if (!text) throw new Error('empty response');
+    // Gemini 失敗 or 未設定 → Claude フォールバック
+    if (!text && claudeKey) {
+      updateMonomerSection(cardId, null, 'Claude Haiku でモノマー逆推定中…');
+      try {
+        text = (await _callClaude({ model: CLAUDE_MODEL_DEFAULT, maxTokens: 2048, content: prompt })).trim();
+      } catch (e) { throw new Error(`Claude: ${e.message || e}`); }
+    }
+    if (!text) throw new Error(`Gemini ${lastStatus || 'empty'} / Claude 未設定 or 失敗`);
     const jsonText = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
     let monomers;
     try { monomers = JSON.parse(jsonText); }
