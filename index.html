@@ -3051,7 +3051,7 @@ PI 共重合体 "PI-0.25" (TAHQ-m-tolidine-3,4-ODA 系) の抽出結果:
         _startPdfElapsed(s => `🤖 Claude (${cm}) 解析中… ${s}s 経過`);
         text = await _callClaude({
           model: cm,
-          maxTokens: 16000,
+          maxTokens: 32000,  // 複雑な論文でも切れないよう拡大 (Claude 4.x は最大 64000 まで対応)
           content: [
             { type: 'document', source: _claudeSource(base64, 'application/pdf') },
             { type: 'text', text: prompt + '\n\n# 出力形式\n純粋な JSON のみを返してください。コードブロックや説明文は不要です。' },
@@ -3102,7 +3102,56 @@ PI 共重合体 "PI-0.25" (TAHQ-m-tolidine-3,4-ODA 系) の抽出結果:
 
   if (!text) throw new Error(lastErr || '全 AI プロバイダ到達不可');
   const cleaned = text.trim().replace(/^```(?:json)?\n?|\n?```$/g, '');
-  return JSON.parse(cleaned);
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    // max_tokens 到達などで切断された JSON を補修して再試行
+    console.warn('[pdf-analyze] 一次 parse 失敗、JSON 修復を試行:', e.message);
+    const repaired = _repairTruncatedJson(cleaned);
+    if (repaired) {
+      try {
+        const parsed = JSON.parse(repaired);
+        _setPdfStatus('⚠ 応答が途中で切断されたため自動補修しました (一部データ欠落の可能性あり)', false);
+        console.warn('[pdf-analyze] JSON 補修成功');
+        return parsed;
+      } catch (e2) {
+        console.warn('[pdf-analyze] 補修後も parse 失敗:', e2.message);
+      }
+    }
+    throw new Error(`JSON parse 失敗: ${e.message}。応答末尾: "...${cleaned.slice(-120)}"`);
+  }
+}
+
+// 途中で切れた JSON を可能な範囲で閉じる (文字列の未終端 → ", 開いた { [ → } ])
+function _repairTruncatedJson(txt) {
+  if (!txt || typeof txt !== 'string') return null;
+  // 直近で成立する深さまで戻しながら閉じる
+  let inString = false, escape = false;
+  const stack = []; // 'o' = object, 'a' = array
+  for (let i = 0; i < txt.length; i++) {
+    const c = txt[i];
+    if (escape) { escape = false; continue; }
+    if (c === '\\' && inString) { escape = true; continue; }
+    if (c === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (c === '{') stack.push('o');
+    else if (c === '[') stack.push('a');
+    else if (c === '}' || c === ']') stack.pop();
+  }
+  let out = txt;
+  // 文字列途中で切れていたら閉じる (値の途中なら "": null に差替えるのは難しいので、単にクォート閉じ)
+  if (inString) {
+    // 最後の "key": "value の value が途中で切れている可能性 → クォート閉じ
+    out += '"';
+  }
+  // 末尾が , で終わっていたら削除 (これが parse 失敗の典型)
+  out = out.replace(/,\s*$/, '');
+  // スタックを閉じる (後入れ先出し)
+  while (stack.length) {
+    const top = stack.pop();
+    out += (top === 'o') ? '}' : ']';
+  }
+  return out;
 }
 
 async function _streamGeminiSSE(res, model) {
