@@ -1218,7 +1218,7 @@ pre.json-pre {
       ondragleave="this.classList.remove('drag-over')"
       ondrop="handlePdfDrop(event)">
       <div><b>PDF をドロップ</b>、またはクリックして選択</div>
-      <div class="pdf-sub">最大 20MB · Gemini でポリマー / モノマーを抽出し、右の検索欄にカード表示</div>
+      <div class="pdf-sub">最大 20MB · Claude / Gemini でポリマー・モノマー抽出、構造式画像は MolScribe で SMILES 化</div>
     </div>
     <input type="file" id="pdfInput" accept="application/pdf" style="display:none"
       onchange="handlePdfFile(this.files[0])">
@@ -2349,14 +2349,17 @@ async function polymerSearch(q) {
   }
 
   const hasGemini = !!localStorage.getItem(_GEMINI_KEY_KEY);
-  const fallbackLabel = hasGemini ? 'Gemini 推定中…' : 'PubChem 検索中…';
+  const hasClaude = !!localStorage.getItem(_CLAUDE_KEY_KEY);
+  const hasLLM = hasGemini || hasClaude;
+  const llmName = hasClaude ? 'Claude' : 'Gemini';
+  const fallbackLabel = hasLLM ? `${llmName} 推定中…` : 'PubChem 検索中…';
   results.innerHTML = html +
     `<div class="psearch-loading">${fallbackLabel} (${missingTokens.map(esc).join(', ')})</div>`;
 
   const extraCards = [];
   for (const tok of missingTokens) {
     if (_searchSeq !== seq) return;
-    const card = hasGemini
+    const card = hasLLM
       ? (await fetchGeminiPolymerCard(tok)) || (await fetchPubChemCard(tok))
       : (await fetchPubChemCard(tok));
     if (card) extraCards.push(card);
@@ -2364,10 +2367,10 @@ async function polymerSearch(q) {
   if (_searchSeq !== seq) return;
 
   const extraHtml = extraCards.join('');
-  const sepLabel = hasGemini ? '🤖 Gemini 推定結果（BigSMILES）' : 'PubChem 検索結果（化合物 SMILES）';
-  const missLabel = hasGemini ? 'Gemini / PubChem いずれからも' : 'PubChem から';
-  const diag = (hasGemini && _geminiLastError)
-    ? `<div style="font-size:11px;color:var(--gray-500);margin-top:6px;word-break:break-all;">Gemini 失敗理由: ${esc(_geminiLastError)}</div>` : '';
+  const sepLabel = hasLLM ? `🤖 ${llmName} 推定結果（BigSMILES）` : 'PubChem 検索結果（化合物 SMILES）';
+  const missLabel = hasLLM ? `${llmName} / PubChem いずれからも` : 'PubChem から';
+  const diag = (hasLLM && _geminiLastError)
+    ? `<div style="font-size:11px;color:var(--gray-500);margin-top:6px;word-break:break-all;">LLM 失敗理由: ${esc(_geminiLastError)}</div>` : '';
   results.innerHTML = (html || '') + (extraHtml
     ? `<div class="psearch-section-sep">↓ ${sepLabel}</div>` + extraHtml
     : `<div class="psearch-empty">${esc(missingTokens.join(', '))}：${missLabel}結果が得られませんでした。${diag}</div>`
@@ -3707,7 +3710,7 @@ function _renderFiguresSection(figures) {
   return `
     <div style="margin-top:10px;border:1px solid #e2e8f0;border-radius:6px;background:white;">
       <div style="padding:6px 10px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:12px;font-weight:600;color:#475569;">
-        🧪 構造式候補 (${rows.length} 件) <span style="font-weight:400;color:var(--gray-400);font-size:11px;">※ Gemini 推定のため要確認</span>
+        🧪 構造式候補 (${rows.length} 件) <span style="font-weight:400;color:var(--gray-400);font-size:11px;">※ Claude / Gemini による推定のため要確認</span>
       </div>
       ${rows.join('')}
     </div>`;
